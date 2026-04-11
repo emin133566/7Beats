@@ -2,1284 +2,1600 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌲 Orman Yarışçısı - Virajlı Yollar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>🗺️ Toprak Savaşları - Strateji Oyunu</title>
     <style>
-        * { margin: 0; padding: 0; overflow: hidden; }
-        body { background: #000; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        canvas { display: block; }
-
-        #ui {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-        }
-
-        #score {
-            position: absolute; top: 20px; left: 20px;
-            color: #fff; font-size: 26px; font-weight: bold;
-            text-shadow: 0 0 10px #0f0, 2px 2px 4px rgba(0,0,0,0.8);
-        }
-        #distance {
-            position: absolute; top: 55px; left: 20px;
-            color: #8f8; font-size: 16px;
-            text-shadow: 0 0 6px #0a0;
-        }
-        #lives {
-            position: absolute; top: 20px; right: 20px;
-            color: #f44; font-size: 28px;
-        }
-        #combo {
-            position: absolute; top: 90px; left: 20px;
-            color: #ffdd00; font-size: 18px;
-            text-shadow: 0 0 10px #ffdd00;
-            opacity: 0; transition: opacity 0.3s;
-        }
-        #notification {
-            position: absolute; top: 40%; left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ffdd00; font-size: 42px; font-weight: bold;
-            text-shadow: 0 0 20px #ffdd00, 0 0 40px #ff8800;
-            opacity: 0; pointer-events: none; transition: all 0.5s;
-        }
-
-        /* === HIZ GÖSTERGESİ === */
-        #speedometer {
-            position: absolute;
-            bottom: 20px; right: 20px;
-            width: 200px; height: 200px;
-        }
-        .speedo-bg {
-            position: relative;
-            width: 200px; height: 200px;
-            border-radius: 50%;
-            background: radial-gradient(circle at 50% 60%, #0a0a0a 0%, #1a1a2a 60%, #0a0a15 100%);
-            border: 3px solid #333;
-            box-shadow: 0 0 20px rgba(0,255,68,0.2), inset 0 0 30px rgba(0,0,0,0.8);
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a2e;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
             overflow: hidden;
+            user-select: none;
         }
-        .speedo-ring {
-            position: absolute;
-            top: 10px; left: 10px;
-            width: 176px; height: 176px;
-            border-radius: 50%;
-            border: 2px solid #1a3a1a;
+        #gameCanvas {
+            display: block;
+            cursor: crosshair;
         }
 
-        .speedo-marks {
-            position: absolute; top: 0; left: 0;
+        /* ÜST BAR */
+        #topBar {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            height: 40px;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            z-index: 100;
+            border-bottom: 1px solid #333;
+        }
+        #topBar .stat {
+            color: #fff;
+            font-size: 13px;
+            margin-right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .stat .label { color: #888; }
+        .stat .value { color: #0f0; font-weight: bold; }
+        .stat .value.troops { color: #4af; }
+        .stat .value.land { color: #fa4; }
+
+        /* MINI HARİTA */
+        #minimap {
+            position: absolute;
+            bottom: 10px; right: 10px;
+            width: 180px; height: 180px;
+            background: rgba(0,0,0,0.7);
+            border: 2px solid #444;
+            border-radius: 4px;
+            z-index: 100;
+        }
+        #minimapCanvas {
             width: 100%; height: 100%;
+            border-radius: 3px;
         }
 
-        .speedo-needle {
+        /* SKOR TABLOSU */
+        #leaderboard {
             position: absolute;
-            bottom: 50%; left: 50%;
-            width: 3px; height: 75px;
-            background: linear-gradient(to top, #ff2200, #ff4400, #ff6600);
-            transform-origin: bottom center;
-            transform: translateX(-50%) rotate(-135deg);
-            transition: transform 0.15s ease-out;
+            top: 50px; right: 10px;
+            width: 200px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #444;
+            border-radius: 6px;
+            z-index: 100;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        #leaderboard h3 {
+            color: #fff;
+            font-size: 13px;
+            padding: 8px 10px;
+            border-bottom: 1px solid #333;
+            margin: 0;
+        }
+        .lb-entry {
+            display: flex;
+            align-items: center;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: #ccc;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        .lb-entry.me { background: rgba(255,255,255,0.05); color: #fff; font-weight: bold; }
+        .lb-rank { width: 22px; color: #888; }
+        .lb-color {
+            width: 12px; height: 12px;
             border-radius: 2px;
-            box-shadow: 0 0 8px #ff4400;
-            z-index: 10;
+            margin-right: 6px;
+            flex-shrink: 0;
         }
-        .speedo-needle::after {
-            content: '';
-            position: absolute;
-            bottom: -6px; left: 50%;
-            transform: translateX(-50%);
-            width: 14px; height: 14px;
-            background: radial-gradient(circle, #ff4400, #aa0000);
-            border-radius: 50%;
-            box-shadow: 0 0 10px #ff4400;
-        }
+        .lb-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lb-land { color: #fa4; margin-left: 8px; font-size: 11px; }
+        .lb-troops { color: #4af; margin-left: 6px; font-size: 11px; }
 
-        .speedo-value {
+        /* KONTROL PANELİ */
+        #controls {
             position: absolute;
-            bottom: 40px; left: 50%;
-            transform: translateX(-50%);
-            color: #0f0; font-size: 28px; font-weight: bold;
-            font-family: 'Courier New', monospace;
-            text-shadow: 0 0 10px #0f0;
-            z-index: 5;
+            bottom: 10px; left: 10px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px;
+            z-index: 100;
         }
-        .speedo-unit {
-            position: absolute;
-            bottom: 25px; left: 50%;
-            transform: translateX(-50%);
-            color: #484; font-size: 11px;
-            letter-spacing: 2px;
-            z-index: 5;
+        #controls label {
+            color: #aaa;
+            font-size: 12px;
+            display: block;
+            margin-bottom: 4px;
         }
-        .speedo-label {
-            position: absolute;
-            top: 60px; left: 50%;
-            transform: translateX(-50%);
-            color: #2a5a2a; font-size: 9px;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            z-index: 5;
+        #attackSlider {
+            width: 180px;
+            accent-color: #f44;
         }
+        #sliderValue {
+            color: #fff;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .ctrl-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .ctrl-btn {
+            padding: 4px 10px;
+            font-size: 11px;
+            border: 1px solid #555;
+            background: #2a2a3e;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .ctrl-btn:hover { background: #3a3a5e; }
+        .ctrl-btn.active { border-color: #0f0; color: #0f0; }
 
-        /* RPM Barı */
-        #rpm-bar {
+        /* BAŞLANGIÇ EKRANI */
+        #startScreen {
             position: absolute;
-            bottom: 230px; right: 20px;
-            width: 200px; height: 14px;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 7px;
-            overflow: hidden;
-        }
-        #rpm-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #00ff44, #44ff00, #aaff00, #ffff00, #ff8800, #ff2200);
-            border-radius: 7px;
-            transition: width 0.1s;
-            box-shadow: 0 0 8px #00ff44;
-        }
-        #rpm-label {
-            position: absolute;
-            bottom: 248px; right: 20px;
-            color: #585; font-size: 11px;
-            letter-spacing: 1px;
-        }
-
-        /* Vites Göstergesi */
-        #gear {
-            position: absolute;
-            bottom: 160px; right: 88px;
-            color: #0f0; font-size: 36px; font-weight: bold;
-            font-family: 'Courier New', monospace;
-            text-shadow: 0 0 15px #0f0;
-        }
-        #gear-label {
-            position: absolute;
-            bottom: 148px; right: 68px;
-            color: #383; font-size: 10px;
-            letter-spacing: 2px;
-        }
-
-        /* Viraj Uyarı */
-        #curve-warning {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ffaa00;
-            font-size: 50px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            pointer-events: none;
-            text-shadow: 0 0 20px #ffaa00;
-        }
-
-        /* === OVERLAY === */
-        #overlay {
-            position: absolute; top: 0; left: 0;
+            top: 0; left: 0;
             width: 100%; height: 100%;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            background: rgba(0,10,0,0.88);
-            pointer-events: all; z-index: 100;
+            background: radial-gradient(ellipse at center, #1a1a3e 0%, #0a0a1e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
         }
-        #overlay h1 {
-            color: #fff; font-size: 48px; margin-bottom: 10px;
-            text-shadow: 0 0 20px #0a4, 0 0 40px #0f0;
+        #startScreen h1 {
+            color: #fff;
+            font-size: 48px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 30px rgba(100,150,255,0.5);
         }
-        #overlay h2 {
-            color: #8b8; font-size: 20px; margin-bottom: 30px;
-            font-weight: normal; text-align: center; line-height: 1.6;
+        #startScreen h2 {
+            color: #668;
+            font-size: 18px;
+            font-weight: normal;
+            margin-bottom: 30px;
         }
-        .final-score {
-            color: #0f0; font-size: 30px; margin-bottom: 20px;
-            text-shadow: 0 0 15px #0f0;
+        #startScreen input {
+            padding: 12px 20px;
+            font-size: 18px;
+            border: 2px solid #446;
+            background: #1a1a2e;
+            color: #fff;
+            border-radius: 8px;
+            width: 280px;
+            text-align: center;
+            margin-bottom: 15px;
+            outline: none;
         }
-        #overlay button {
-            padding: 15px 50px; font-size: 22px;
-            border: 2px solid #0f0; background: transparent;
-            color: #0f0; border-radius: 50px; cursor: pointer;
-            transition: all 0.3s; text-transform: uppercase; letter-spacing: 3px;
+        #startScreen input:focus { border-color: #68f; }
+        .settings-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
         }
-        #overlay button:hover {
-            background: #0f0; color: #000;
-            box-shadow: 0 0 30px #0f0, 0 0 60px #0a4;
+        .setting-option {
+            padding: 8px 16px;
+            border: 1px solid #446;
+            border-radius: 6px;
+            color: #aaa;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
         }
-        .controls-info {
-            color: #6a6; font-size: 14px; margin-top: 25px;
-            text-align: center; line-height: 1.8;
+        .setting-option:hover { border-color: #68f; color: #fff; }
+        .setting-option.selected { border-color: #4f4; color: #4f4; background: rgba(0,255,0,0.05); }
+        #startBtn {
+            padding: 14px 60px;
+            font-size: 20px;
+            border: 2px solid #4af;
+            background: transparent;
+            color: #4af;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.3s;
+            letter-spacing: 2px;
+            margin-top: 10px;
         }
+        #startBtn:hover {
+            background: #4af;
+            color: #000;
+            box-shadow: 0 0 30px rgba(68,170,255,0.5);
+        }
+        .start-label {
+            color: #668;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+
+        /* BİLDİRİMLER */
+        #notifications {
+            position: absolute;
+            top: 50px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 150;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            pointer-events: none;
+        }
+        .notification {
+            background: rgba(0,0,0,0.8);
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            animation: fadeOut 3s forwards;
+            border-left: 3px solid #4af;
+        }
+        .notification.attack { border-left-color: #f44; }
+        .notification.capture { border-left-color: #4f4; }
+        .notification.defeat { border-left-color: #ff0; }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: translateY(0); }
+            70% { opacity: 1; }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+
+        /* OYUN SONU */
+        #gameOver {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        #gameOver h1 { color: #fff; font-size: 44px; margin-bottom: 10px; }
+        #gameOver .go-stats { color: #aaa; font-size: 18px; margin-bottom: 8px; }
+        #gameOver .go-score { color: #4f4; font-size: 32px; margin-bottom: 20px; }
+        #restartBtn {
+            padding: 12px 50px;
+            font-size: 18px;
+            border: 2px solid #4af;
+            background: transparent;
+            color: #4af;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        #restartBtn:hover { background: #4af; color: #000; }
+
+        /* ZOOM KONTROLÜ */
+        #zoomControls {
+            position: absolute;
+            bottom: 200px; right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 100;
+        }
+        .zoom-btn {
+            width: 36px; height: 36px;
+            border: 1px solid #555;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            font-size: 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .zoom-btn:hover { background: #3a3a5e; }
+
+        /* SPEED CONTROLS */
+        #speedControls {
+            position: absolute;
+            top: 45px; left: 10px;
+            display: flex;
+            gap: 4px;
+            z-index: 100;
+        }
+        .speed-btn {
+            padding: 3px 10px;
+            font-size: 12px;
+            border: 1px solid #444;
+            background: rgba(0,0,0,0.7);
+            color: #aaa;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .speed-btn.active { border-color: #4af; color: #4af; }
     </style>
 </head>
 <body>
 
-<div id="ui">
-    <div id="score">Skor: 0</div>
-    <div id="distance">Mesafe: 0 m</div>
-    <div id="lives">❤️❤️❤️</div>
-    <div id="combo"></div>
-    <div id="notification"></div>
-    <div id="curve-warning"></div>
+<canvas id="gameCanvas"></canvas>
+<canvas id="minimapCanvas" width="180" height="180" style="display:none;"></canvas>
 
-    <!-- Hız Göstergesi -->
-    <div id="speedometer">
-        <div class="speedo-bg">
-            <div class="speedo-ring"></div>
-            <svg class="speedo-marks" viewBox="0 0 200 200">
-                <defs>
-                    <filter id="glow">
-                        <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
-                        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
-                </defs>
-                <!-- Büyük çizgiler ve sayılar -->
-                <g filter="url(#glow)">
-                    <!-- 0 -->
-                    <line x1="38" y1="162" x2="48" y2="152" stroke="#0f0" stroke-width="2"/>
-                    <text x="28" y="172" fill="#0a0" font-size="11" font-family="Courier New">0</text>
-                    <!-- 40 -->
-                    <line x1="18" y1="110" x2="30" y2="110" stroke="#0f0" stroke-width="2"/>
-                    <text x="8" y="114" fill="#0a0" font-size="11" font-family="Courier New">40</text>
-                    <!-- 80 -->
-                    <line x1="30" y1="58" x2="42" y2="65" stroke="#0f0" stroke-width="2"/>
-                    <text x="16" y="55" fill="#0a0" font-size="11" font-family="Courier New">80</text>
-                    <!-- 120 -->
-                    <line x1="70" y1="24" x2="76" y2="36" stroke="#0f0" stroke-width="2"/>
-                    <text x="58" y="22" fill="#0f0" font-size="11" font-family="Courier New">120</text>
-                    <!-- 160 -->
-                    <line x1="120" y1="20" x2="118" y2="34" stroke="#4a0" stroke-width="2"/>
-                    <text x="112" y="18" fill="#ff0" font-size="11" font-family="Courier New">160</text>
-                    <!-- 200 -->
-                    <line x1="158" y1="42" x2="150" y2="52" stroke="#a40" stroke-width="2"/>
-                    <text x="152" y="38" fill="#f80" font-size="11" font-family="Courier New">200</text>
-                    <!-- 240 -->
-                    <line x1="176" y1="80" x2="164" y2="84" stroke="#a00" stroke-width="2"/>
-                    <text x="166" y="78" fill="#f44" font-size="11" font-family="Courier New">240</text>
-                    <!-- 280 -->
-                    <line x1="178" y1="120" x2="166" y2="118" stroke="#a00" stroke-width="2"/>
-                    <text x="166" y="134" fill="#f22" font-size="11" font-family="Courier New">280</text>
-                    <!-- 320 -->
-                    <line x1="162" y1="158" x2="152" y2="150" stroke="#f00" stroke-width="2"/>
-                    <text x="152" y="172" fill="#f00" font-size="11" font-family="Courier New">320</text>
-                </g>
-                <!-- Küçük bölme çizgileri -->
-                <g stroke="#1a3a1a" stroke-width="1">
-                    <line x1="26" y1="138" x2="36" y2="132"/>
-                    <line x1="20" y1="85" x2="32" y2="88"/>
-                    <line x1="46" y1="38" x2="55" y2="48"/>
-                    <line x1="95" y1="18" x2="95" y2="32"/>
-                    <line x1="140" y1="28" x2="135" y2="42"/>
-                    <line x1="170" y1="60" x2="158" y2="66"/>
-                    <line x1="180" y1="100" x2="168" y2="100"/>
-                    <line x1="172" y1="140" x2="162" y2="135"/>
-                </g>
-                <!-- Kırmızı bölge arkı -->
-                <path d="M 155,48 A 80,80 0 0 1 172,148" fill="none" stroke="rgba(255,0,0,0.15)" stroke-width="8"/>
-            </svg>
-            <div class="speedo-needle" id="speedo-needle"></div>
-            <div class="speedo-value" id="speedo-value">0</div>
-            <div class="speedo-unit">KM/H</div>
-            <div class="speedo-label">FOREST RACER</div>
-        </div>
+<!-- BAŞLANGIÇ -->
+<div id="startScreen">
+    <h1>🗺️ Toprak Savaşları</h1>
+    <h2>Haritayı fethet, düşmanları yok et!</h2>
+    <input type="text" id="playerName" placeholder="İsmini gir..." maxlength="16" value="">
+    <div class="start-label">Harita Boyutu</div>
+    <div class="settings-row" id="mapSizeOptions">
+        <div class="setting-option" data-value="small">Küçük</div>
+        <div class="setting-option selected" data-value="medium">Orta</div>
+        <div class="setting-option" data-value="large">Büyük</div>
     </div>
-
-    <div id="rpm-label">RPM</div>
-    <div id="rpm-bar"><div id="rpm-fill"></div></div>
-    <div id="gear-label">VİTES</div>
-    <div id="gear" >1</div>
-</div>
-
-<div id="overlay">
-    <h1>🌲 Orman Yarışçısı 🌲</h1>
-    <h2>Virajlı dağ yollarında ağaçların arasında<br>engelleri aşarak hayatta kal!</h2>
-    <div class="final-score" id="finalScore" style="display:none;"></div>
+    <div class="start-label">Bot Sayısı</div>
+    <div class="settings-row" id="botCountOptions">
+        <div class="setting-option" data-value="5">5</div>
+        <div class="setting-option selected" data-value="10">10</div>
+        <div class="setting-option" data-value="20">20</div>
+        <div class="setting-option" data-value="30">30</div>
+    </div>
+    <div class="start-label">Zorluk</div>
+    <div class="settings-row" id="difficultyOptions">
+        <div class="setting-option" data-value="easy">Kolay</div>
+        <div class="setting-option selected" data-value="normal">Normal</div>
+        <div class="setting-option" data-value="hard">Zor</div>
+    </div>
     <button id="startBtn">BAŞLA</button>
-    <div class="controls-info">
-        ⬅️ A / Sol Ok = Sola &nbsp;|&nbsp; ➡️ D / Sağ Ok = Sağa<br>
-        ⬆️ W / Yukarı = Hızlan &nbsp;|&nbsp; ⬇️ S / Aşağı = Yavaşla<br>
-        📱 Dokunmatik Destekli
+</div>
+
+<!-- ÜST BAR -->
+<div id="topBar" style="display:none;">
+    <div class="stat">
+        <span class="label">Toprak:</span>
+        <span class="value land" id="myLand">0</span>
+    </div>
+    <div class="stat">
+        <span class="label">Asker:</span>
+        <span class="value troops" id="myTroops">0</span>
+    </div>
+    <div class="stat">
+        <span class="label">Gelir:</span>
+        <span class="value" id="myIncome">+0/s</span>
+    </div>
+    <div class="stat">
+        <span class="label">Oyuncular:</span>
+        <span class="value" id="aliveCount">0</span>
+    </div>
+    <div class="stat">
+        <span class="label">Süre:</span>
+        <span class="value" id="gameTime">0:00</span>
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<!-- HIZ KONTROL -->
+<div id="speedControls" style="display:none;">
+    <div class="speed-btn" data-speed="0">⏸</div>
+    <div class="speed-btn active" data-speed="1">▶</div>
+    <div class="speed-btn" data-speed="2">▶▶</div>
+    <div class="speed-btn" data-speed="3">▶▶▶</div>
+</div>
+
+<!-- SKOR TABLOSU -->
+<div id="leaderboard" style="display:none;">
+    <h3>🏆 Skor Tablosu</h3>
+    <div id="lbEntries"></div>
+</div>
+
+<!-- MİNİ HARİTA -->
+<div id="minimap" style="display:none;"></div>
+
+<!-- KONTROLLER -->
+<div id="controls" style="display:none;">
+    <div class="ctrl-row">
+        <label>Saldırı Gücü: <span id="sliderValue">50%</span></label>
+    </div>
+    <div class="ctrl-row">
+        <input type="range" id="attackSlider" min="1" max="100" value="50">
+    </div>
+    <div class="ctrl-row">
+        <div class="ctrl-btn" id="btnAttack" title="Toprak seç ve saldır">⚔️ Saldır</div>
+        <div class="ctrl-btn" id="btnDonate" title="Müttefike asker gönder">🤝 Bağış</div>
+    </div>
+</div>
+
+<!-- ZOOM -->
+<div id="zoomControls" style="display:none;">
+    <div class="zoom-btn" id="zoomIn">+</div>
+    <div class="zoom-btn" id="zoomOut">−</div>
+</div>
+
+<!-- BİLDİRİMLER -->
+<div id="notifications"></div>
+
+<!-- OYUN SONU -->
+<div id="gameOver">
+    <h1 id="goTitle">🏆 Kazandın!</h1>
+    <div class="go-stats" id="goStats"></div>
+    <div class="go-score" id="goScore"></div>
+    <button id="restartBtn">TEKRAR OYNA</button>
+</div>
+
 <script>
-// ===================== OYUN AYARLARI =====================
-const LANES = [-3, -1, 1, 3];
-const ROAD_WIDTH = 10;
-const INITIAL_SPEED = 0.35;
-const MAX_SPEED = 2.5;
-const SPEED_INCREMENT = 0.0003;
-const TREE_DENSITY = 200;
-const SEGMENT_LENGTH = 5;
-const TOTAL_SEGMENTS = 600;
-const DRAW_DISTANCE = 250;
+// ==================================================================
+//  TOPRAK SAVAŞLARI - ANA OYUN MOTORU
+// ==================================================================
 
-// ===================== VIRAJ SİSTEMİ =====================
-let roadSegments = [];
-let roadCurve = []; // Her segment için viraj açısı
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const mmCanvas = document.getElementById('minimapCanvas');
+const mmCtx = mmCanvas.getContext('2d');
 
-function generateRoadCurve() {
-    roadCurve = [];
-    let currentCurve = 0;
-    let curveTarget = 0;
-    let curveTimer = 0;
+// === OYUN DURUMU ===
+let GAME = {
+    running: false,
+    speed: 1,
+    time: 0,
+    tick: 0,
+    mapW: 0,
+    mapH: 0,
+    cellSize: 0,
+    gridW: 0,
+    gridH: 0,
+    grid: [],          // Her hücre: { owner: id, troops: n }
+    players: [],
+    playerID: 0,
+    difficulty: 'normal',
+    selectedTarget: -1,
+    attackPercent: 50,
+    mode: 'attack',    // 'attack' | 'donate'
+    camera: { x: 0, y: 0, zoom: 1 },
+    dragging: false,
+    dragStart: { x: 0, y: 0 },
+    camStart: { x: 0, y: 0 },
+    mouseWorld: { x: 0, y: 0 },
+    hoverCell: null,
+    notifications: [],
+    eliminatedPlayers: new Set()
+};
 
-    for (let i = 0; i < TOTAL_SEGMENTS * 2; i++) {
-        curveTimer--;
-        if (curveTimer <= 0) {
-            // Yeni viraj hedefi
-            const difficulty = Math.min(1, i / 500);
-            curveTarget = (Math.random() - 0.5) * 0.035 * (1 + difficulty);
-            // Bazen düz yol
-            if (Math.random() > 0.6) curveTarget = 0;
-            curveTimer = 30 + Math.floor(Math.random() * 80);
-        }
-        currentCurve += (curveTarget - currentCurve) * 0.02;
-        roadCurve.push(currentCurve);
-    }
-}
+// === BOT İSİMLERİ ===
+const BOT_NAMES = [
+    'İmparator', 'Fatih', 'Cengiz', 'Sezar', 'İskender', 'Napolyon',
+    'Atilla', 'Timur', 'Hannibal', 'Yavuz', 'Kanuni', 'Barbaros',
+    'Melikşah', 'Osman', 'Kılıç', 'Alparslan', 'Bayezid', 'Mete',
+    'Tomris', 'Zenobia', 'Kleopatra', 'Boudica', 'Vikingleri', 'Samurai',
+    'Şövalye', 'Centurion', 'Gladyatör', 'Spartalı', 'Kaptan', 'Amiral',
+    'General', 'Mareşal', 'Sultan', 'Kral', 'Dük', 'Lord'
+];
 
-function getRoadOffset(segIndex) {
-    let offset = 0;
-    let angle = 0;
-    for (let i = 0; i < segIndex && i < roadCurve.length; i++) {
-        angle += roadCurve[i];
-        offset += Math.sin(angle) * SEGMENT_LENGTH;
-    }
-    return { x: offset, angle: angle };
-}
+// === RENK PALETİ ===
+const COLORS = [
+    '#4488ff', '#ff4444', '#44cc44', '#ff8800', '#cc44cc', '#44cccc',
+    '#ffcc00', '#ff44aa', '#88cc44', '#4444cc', '#cc8844', '#44ff88',
+    '#aa44ff', '#ff6666', '#66ccaa', '#cc6644', '#88aaff', '#ffaa44',
+    '#44aacc', '#cc44aa', '#aacc44', '#6644cc', '#44cc88', '#ff88cc',
+    '#88ff44', '#4488cc', '#ccaa44', '#cc4488', '#44ccaa', '#aa88ff',
+    '#ff4488', '#88cc88'
+];
 
-// ===================== THREE.JS =====================
-let scene, camera, renderer, clock;
-let car, carModel;
-let roadMeshes = [];
-let obstacles = [], coins = [], particles = [];
-let treesAll = [];
-let fireflies = [];
-let mountains = [];
-let speed = INITIAL_SPEED;
-let score = 0;
-let lives = 3;
-let gameRunning = false;
-let currentLane = 1;
-let targetX = LANES[1];
-let carX = LANES[1];
-let carWorldX = 0;
-let carWorldZ = 0;
-let boosting = false;
-let braking = false;
-let invincible = false;
-let distanceSinceObstacle = 0;
-let distanceSinceCoin = 0;
-let nextObstacleDistance = 60;
-let shakeAmount = 0;
-let comboCount = 0;
-let comboTimer = 0;
-let totalDistance = 0;
-let currentSegment = 0;
-let carTilt = 0;
-let carSway = 0;
-let carBounce = 0;
-let steeringAngle = 0;
-let wheelAngle = 0;
-let currentRoadAngle = 0;
-let displaySpeed = 0;
-let engineRPM = 0;
-let currentGear = 1;
+// === BAŞLANGIÇ MENÜSÜ ===
+let mapSize = 'medium';
+let botCount = 10;
+let difficulty = 'normal';
 
-const keys = {};
-
-function init() {
-    scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x001208, 0.006);
-    scene.background = new THREE.Color(0x000a04);
-
-    camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.1, 800);
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    document.body.insertBefore(renderer.domElement, document.getElementById('ui'));
-
-    clock = new THREE.Clock();
-
-    // Işıklar
-    scene.add(new THREE.AmbientLight(0x112211, 0.4));
-    const moonLight = new THREE.DirectionalLight(0x6688bb, 0.4);
-    moonLight.position.set(-30, 50, -40);
-    moonLight.castShadow = true;
-    scene.add(moonLight);
-
-    // Ay
-    const moonGeo = new THREE.SphereGeometry(4, 16, 16);
-    const moonMat = new THREE.MeshBasicMaterial({ color: 0xddeeff });
-    const moon = new THREE.Mesh(moonGeo, moonMat);
-    moon.position.set(-60, 80, -300);
-    scene.add(moon);
-    scene.add(new THREE.PointLight(0x6688bb, 0.3, 500));
-
-    generateRoadCurve();
-    createRoadSegments();
-    createCar();
-    createMountains();
-    createForest();
-    createStarfield();
-    createFireflies();
-
-    // Kontroller
-    window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-    window.addEventListener('resize', onResize);
-    document.getElementById('startBtn').addEventListener('click', startGame);
-
-    let touchStartX = 0;
-    renderer.domElement.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
-    renderer.domElement.addEventListener('touchmove', e => {
-        e.preventDefault();
-        const dx = e.touches[0].clientX - touchStartX;
-        if (dx > 30) { moveRight(); touchStartX = e.touches[0].clientX; }
-        if (dx < -30) { moveLeft(); touchStartX = e.touches[0].clientX; }
+document.querySelectorAll('#mapSizeOptions .setting-option').forEach(el => {
+    el.addEventListener('click', () => {
+        document.querySelectorAll('#mapSizeOptions .setting-option').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+        mapSize = el.dataset.value;
     });
-
-    animate();
-}
-
-// ===================== YOL =====================
-function createRoadSegments() {
-    const roadGroup = new THREE.Group();
-    scene.add(roadGroup);
-
-    for (let i = 0; i < TOTAL_SEGMENTS; i++) {
-        const seg = createRoadPiece(i);
-        roadGroup.add(seg.mesh);
-        roadSegments.push(seg);
-    }
-    updateRoadPositions();
-}
-
-function createRoadPiece(index) {
-    const group = new THREE.Group();
-
-    // Yol yüzeyi
-    const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, SEGMENT_LENGTH + 0.5);
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.85 });
-    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
-    roadMesh.rotation.x = -Math.PI / 2;
-    roadMesh.receiveShadow = true;
-    group.add(roadMesh);
-
-    // Yol kenarları
-    const edgeMat = new THREE.MeshBasicMaterial({ color: 0x00ff44 });
-    for (let side of [-1, 1]) {
-        const edgeGeo = new THREE.BoxGeometry(0.12, 0.08, SEGMENT_LENGTH + 0.5);
-        const edge = new THREE.Mesh(edgeGeo, edgeMat);
-        edge.position.set(side * ROAD_WIDTH / 2, 0.04, 0);
-        group.add(edge);
-    }
-
-    // Orta çizgi
-    if (index % 3 !== 0) {
-        const lineGeo = new THREE.BoxGeometry(0.08, 0.04, SEGMENT_LENGTH * 0.5);
-        const lineMat = new THREE.MeshBasicMaterial({ color: 0x334433 });
-        const line = new THREE.Mesh(lineGeo, lineMat);
-        line.position.set(0, 0.04, 0);
-        group.add(line);
-    }
-
-    // Kenar refektörleri
-    if (index % 5 === 0) {
-        for (let side of [-1, 1]) {
-            const refGeo = new THREE.BoxGeometry(0.15, 0.4, 0.15);
-            const refMat = new THREE.MeshBasicMaterial({
-                color: side === -1 ? 0xff4400 : 0x00ff44
-            });
-            const ref = new THREE.Mesh(refGeo, refMat);
-            ref.position.set(side * (ROAD_WIDTH / 2 + 0.3), 0.2, 0);
-            group.add(ref);
-        }
-    }
-
-    return { mesh: group, index: index };
-}
-
-function updateRoadPositions() {
-    let x = 0, z = 0, angle = 0;
-
-    for (let i = 0; i < roadSegments.length; i++) {
-        const seg = roadSegments[i];
-        const curveVal = roadCurve[i] || 0;
-        angle += curveVal;
-
-        seg.mesh.position.set(x, 0, -z);
-        seg.mesh.rotation.y = -angle;
-        seg.worldX = x;
-        seg.worldZ = -z;
-        seg.angle = angle;
-
-        x += Math.sin(angle) * SEGMENT_LENGTH;
-        z += Math.cos(angle) * SEGMENT_LENGTH;
-    }
-}
-
-// ===================== ARABA =====================
-function createCar() {
-    car = new THREE.Group();
-    carModel = new THREE.Group();
-
-    // Gövde
-    const bodyGeo = new THREE.BoxGeometry(1.6, 0.55, 3.2);
-    const bodyMat = new THREE.MeshStandardMaterial({
-        color: 0x00cc44, metalness: 0.8, roughness: 0.2,
-        emissive: 0x003311, emissiveIntensity: 0.3
+});
+document.querySelectorAll('#botCountOptions .setting-option').forEach(el => {
+    el.addEventListener('click', () => {
+        document.querySelectorAll('#botCountOptions .setting-option').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+        botCount = parseInt(el.dataset.value);
     });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 0.5;
-    body.castShadow = true;
-    carModel.add(body);
-
-    // Tavan
-    const topGeo = new THREE.BoxGeometry(1.3, 0.45, 1.6);
-    const topMat = new THREE.MeshStandardMaterial({ color: 0x009933, metalness: 0.9, roughness: 0.1 });
-    const top = new THREE.Mesh(topGeo, topMat);
-    top.position.set(0, 1.0, -0.1);
-    carModel.add(top);
-
-    // Ön cam
-    const windGeo = new THREE.BoxGeometry(1.2, 0.4, 0.08);
-    const windMat = new THREE.MeshStandardMaterial({
-        color: 0x88ffcc, transparent: true, opacity: 0.4, metalness: 0.9
+});
+document.querySelectorAll('#difficultyOptions .setting-option').forEach(el => {
+    el.addEventListener('click', () => {
+        document.querySelectorAll('#difficultyOptions .setting-option').forEach(e => e.classList.remove('selected'));
+        el.classList.add('selected');
+        difficulty = el.dataset.value;
     });
-    const wind = new THREE.Mesh(windGeo, windMat);
-    wind.position.set(0, 0.95, 0.7);
-    carModel.add(wind);
+});
 
-    // Farlar
-    for (let side of [-0.55, 0.55]) {
-        const hlGeo = new THREE.BoxGeometry(0.28, 0.14, 0.08);
-        const hlMat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
-        const hl = new THREE.Mesh(hlGeo, hlMat);
-        hl.position.set(side, 0.5, -1.65);
-        carModel.add(hl);
-
-        const spot = new THREE.SpotLight(0xffffaa, 0.6, 50, Math.PI / 6, 0.5);
-        spot.position.set(side, 0.5, -1.65);
-        spot.target.position.set(side * 0.3, 0, -25);
-        carModel.add(spot);
-        carModel.add(spot.target);
-
-        const coneGeo = new THREE.ConeGeometry(2.5, 25, 8, 1, true);
-        const coneMat = new THREE.MeshBasicMaterial({
-            color: 0xffffaa, transparent: true, opacity: 0.015, side: THREE.DoubleSide
-        });
-        const cone = new THREE.Mesh(coneGeo, coneMat);
-        cone.rotation.x = Math.PI / 2;
-        cone.position.set(side, 0.4, -14);
-        carModel.add(cone);
-    }
-
-    // Stop lambaları
-    for (let side of [-0.6, 0.6]) {
-        const tlGeo = new THREE.BoxGeometry(0.22, 0.12, 0.08);
-        const tlMat = new THREE.MeshBasicMaterial({ color: 0xff2200 });
-        const tl = new THREE.Mesh(tlGeo, tlMat);
-        tl.position.set(side, 0.5, 1.65);
-        carModel.add(tl);
-    }
-
-    // Fren lambaları (fren sırasında parlar)
-    const brakeLightGeo = new THREE.BoxGeometry(1.2, 0.08, 0.06);
-    const brakeLightMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0 });
-    const brakeLight = new THREE.Mesh(brakeLightGeo, brakeLightMat);
-    brakeLight.position.set(0, 0.65, 1.68);
-    brakeLight.name = 'brakeLight';
-    carModel.add(brakeLight);
-
-    // Tekerlekler
-    const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.18, 12);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-    [[-0.85, 0.28, -0.9], [0.85, 0.28, -0.9], [-0.85, 0.28, 0.9], [0.85, 0.28, 0.9]].forEach((pos, idx) => {
-        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-        wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(...pos);
-        wheel.name = 'wheel_' + idx;
-        carModel.add(wheel);
+document.querySelectorAll('.speed-btn').forEach(el => {
+    el.addEventListener('click', () => {
+        document.querySelectorAll('.speed-btn').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        GAME.speed = parseInt(el.dataset.speed);
     });
+});
 
-    // Alt neon
-    const underGlow = new THREE.PointLight(0x00ff44, 0.5, 8);
-    underGlow.position.set(0, 0.1, 0);
-    carModel.add(underGlow);
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', () => {
+    document.getElementById('gameOver').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'flex';
+});
 
-    car.add(carModel);
-    car.position.set(0, 0, 0);
-    scene.add(car);
+document.getElementById('attackSlider').addEventListener('input', (e) => {
+    GAME.attackPercent = parseInt(e.target.value);
+    document.getElementById('sliderValue').textContent = GAME.attackPercent + '%';
+});
+
+document.getElementById('btnAttack').addEventListener('click', () => {
+    GAME.mode = 'attack';
+    document.getElementById('btnAttack').classList.add('active');
+    document.getElementById('btnDonate').classList.remove('active');
+});
+document.getElementById('btnDonate').addEventListener('click', () => {
+    GAME.mode = 'donate';
+    document.getElementById('btnDonate').classList.add('active');
+    document.getElementById('btnAttack').classList.remove('active');
+});
+
+document.getElementById('zoomIn').addEventListener('click', () => {
+    GAME.camera.zoom = Math.min(GAME.camera.zoom * 1.3, 8);
+});
+document.getElementById('zoomOut').addEventListener('click', () => {
+    GAME.camera.zoom = Math.max(GAME.camera.zoom / 1.3, 0.3);
+});
+
+// === CANVAS BOYUTLAMA ===
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-// ===================== DAĞLAR =====================
-function createMountains() {
-    const mountainColors = [0x0a1a08, 0x081508, 0x0c1a0a, 0x061006];
+// ==================================================================
+//  HARİTA OLUŞTURMA
+// ==================================================================
+function generateMap() {
+    const sizes = {
+        small: { w: 120, h: 80, cell: 8 },
+        medium: { w: 200, h: 140, cell: 6 },
+        large: { w: 300, h: 200, cell: 5 }
+    };
+    const s = sizes[mapSize];
+    GAME.gridW = s.w;
+    GAME.gridH = s.h;
+    GAME.cellSize = s.cell;
+    GAME.mapW = s.w * s.cell;
+    GAME.mapH = s.h * s.cell;
 
-    for (let i = 0; i < 30; i++) {
-        const side = Math.random() > 0.5 ? 1 : -1;
-        const h = 20 + Math.random() * 60;
-        const w = 30 + Math.random() * 50;
+    // Perlin-benzeri gürültü ile kara/deniz haritası oluştur
+    GAME.grid = [];
+    const noiseScale = 0.04;
+    const landThreshold = 0.38;
 
-        const geo = new THREE.ConeGeometry(w, h, 5 + Math.floor(Math.random() * 4));
-        const mat = new THREE.MeshStandardMaterial({
-            color: mountainColors[Math.floor(Math.random() * mountainColors.length)],
-            roughness: 1, flatShading: true
-        });
-        const mountain = new THREE.Mesh(geo, mat);
-        mountain.position.set(
-            side * (50 + Math.random() * 120),
-            h / 2 - 5,
-            -(Math.random() * 500 + 50)
-        );
-        mountain.rotation.y = Math.random() * Math.PI;
-        scene.add(mountain);
-        mountains.push(mountain);
+    // Basit gürültü oluşturucu
+    const seed = Math.random() * 10000;
+    function noise2D(x, y) {
+        const n = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
+        return n - Math.floor(n);
+    }
 
-        // Kar tepesi (yüksek dağlar)
-        if (h > 40) {
-            const snowGeo = new THREE.ConeGeometry(w * 0.3, h * 0.15, 5);
-            const snowMat = new THREE.MeshBasicMaterial({ color: 0x445544, transparent: true, opacity: 0.3 });
-            const snow = new THREE.Mesh(snowGeo, snowMat);
-            snow.position.set(mountain.position.x, mountain.position.y + h * 0.42, mountain.position.z);
-            scene.add(snow);
-            mountains.push(snow);
+    function smoothNoise(x, y, scale) {
+        const sx = x * scale;
+        const sy = y * scale;
+        const ix = Math.floor(sx);
+        const iy = Math.floor(sy);
+        const fx = sx - ix;
+        const fy = sy - iy;
+
+        const a = noise2D(ix, iy);
+        const b = noise2D(ix + 1, iy);
+        const c = noise2D(ix, iy + 1);
+        const d = noise2D(ix + 1, iy + 1);
+
+        const i1 = a + (b - a) * fx;
+        const i2 = c + (d - c) * fx;
+        return i1 + (i2 - i1) * fy;
+    }
+
+    function fbm(x, y) {
+        let v = 0;
+        v += smoothNoise(x, y, 0.02) * 0.5;
+        v += smoothNoise(x, y, 0.05) * 0.3;
+        v += smoothNoise(x, y, 0.1) * 0.15;
+        v += smoothNoise(x, y, 0.2) * 0.05;
+        return v;
+    }
+
+    for (let y = 0; y < GAME.gridH; y++) {
+        for (let x = 0; x < GAME.gridW; x++) {
+            const idx = y * GAME.gridW + x;
+            const n = fbm(x, y);
+
+            // Kenarları deniz yap
+            const edgeDist = Math.min(x, y, GAME.gridW - x - 1, GAME.gridH - y - 1);
+            const edgeFactor = Math.min(1, edgeDist / 15);
+            const val = n * edgeFactor;
+
+            const isLand = val > landThreshold;
+            GAME.grid[idx] = {
+                owner: isLand ? -1 : -2,   // -1=sahipsiz kara, -2=deniz
+                troops: 0,
+                elevation: val,
+                terrain: isLand ? (val > 0.65 ? 'mountain' : val > 0.55 ? 'forest' : 'plains') : 'water'
+            };
         }
     }
 
-    // Uzak sis dağları
-    for (let i = 0; i < 15; i++) {
-        const side = Math.random() > 0.5 ? 1 : -1;
-        const h = 40 + Math.random() * 80;
-        const w = 60 + Math.random() * 80;
-        const geo = new THREE.ConeGeometry(w, h, 4);
-        const mat = new THREE.MeshBasicMaterial({
-            color: 0x051005, transparent: true, opacity: 0.5
-        });
-        const m = new THREE.Mesh(geo, mat);
-        m.position.set(side * (100 + Math.random() * 200), h / 2 - 10, -(200 + Math.random() * 300));
-        scene.add(m);
-        mountains.push(m);
+    // Adaları temizle (küçük kara parçalarını sil)
+    cleanSmallIslands(20);
+}
+
+function cleanSmallIslands(minSize) {
+    const visited = new Array(GAME.gridW * GAME.gridH).fill(false);
+
+    for (let y = 0; y < GAME.gridH; y++) {
+        for (let x = 0; x < GAME.gridW; x++) {
+            const idx = y * GAME.gridW + x;
+            if (visited[idx] || GAME.grid[idx].owner === -2) continue;
+
+            // BFS ile ada boyutunu bul
+            const island = [];
+            const queue = [{ x, y }];
+            visited[idx] = true;
+
+            while (queue.length > 0) {
+                const p = queue.shift();
+                island.push(p);
+                const neighbors = getNeighbors(p.x, p.y);
+                for (const n of neighbors) {
+                    const ni = n.y * GAME.gridW + n.x;
+                    if (!visited[ni] && GAME.grid[ni].owner !== -2) {
+                        visited[ni] = true;
+                        queue.push(n);
+                    }
+                }
+            }
+
+            if (island.length < minSize) {
+                island.forEach(p => {
+                    GAME.grid[p.y * GAME.gridW + p.x].owner = -2;
+                    GAME.grid[p.y * GAME.gridW + p.x].terrain = 'water';
+                });
+            }
+        }
     }
 }
 
-// ===================== ORMAN =====================
-function createForest() {
-    for (let i = 0; i < TREE_DENSITY; i++) {
-        for (let side of [-1, 1]) {
-            const tree = createTree();
-            const segIdx = Math.floor(Math.random() * TOTAL_SEGMENTS * 0.8);
-            const seg = roadSegments[segIdx];
-            if (!seg) continue;
+function getNeighbors(x, y) {
+    const n = [];
+    if (x > 0) n.push({ x: x - 1, y });
+    if (x < GAME.gridW - 1) n.push({ x: x + 1, y });
+    if (y > 0) n.push({ x, y: y - 1 });
+    if (y < GAME.gridH - 1) n.push({ x, y: y + 1 });
+    return n;
+}
 
-            const offset = side * (ROAD_WIDTH / 2 + 1.5 + Math.random() * 25);
-            const perpX = Math.cos(seg.angle) * offset;
-            const perpZ = -Math.sin(seg.angle) * offset;
+// ==================================================================
+//  OYUNCU OLUŞTURMA
+// ==================================================================
+function createPlayers() {
+    GAME.players = [];
+    GAME.eliminatedPlayers = new Set();
 
-            tree.position.set(
-                seg.worldX + perpX,
-                0,
-                seg.worldZ + perpZ
+    const playerName = document.getElementById('playerName').value.trim() || 'Oyuncu';
+    const totalPlayers = botCount + 1;
+
+    // Karaya yerleşim noktaları bul
+    const landCells = [];
+    for (let y = 0; y < GAME.gridH; y++) {
+        for (let x = 0; x < GAME.gridW; x++) {
+            if (GAME.grid[y * GAME.gridW + x].owner === -1) {
+                landCells.push({ x, y });
+            }
+        }
+    }
+
+    // Oyuncuları yerleştir (birbirinden uzak)
+    const spawnPoints = [];
+    for (let i = 0; i < totalPlayers; i++) {
+        let bestPoint = null;
+        let bestDist = 0;
+
+        for (let attempt = 0; attempt < 200; attempt++) {
+            const cell = landCells[Math.floor(Math.random() * landCells.length)];
+            let minDist = Infinity;
+            for (const sp of spawnPoints) {
+                const d = Math.hypot(cell.x - sp.x, cell.y - sp.y);
+                minDist = Math.min(minDist, d);
+            }
+            if (spawnPoints.length === 0) minDist = Infinity;
+            if (minDist > bestDist) {
+                bestDist = minDist;
+                bestPoint = cell;
+            }
+        }
+        spawnPoints.push(bestPoint);
+    }
+
+    // Oyuncuları oluştur
+    const shuffledNames = BOT_NAMES.sort(() => Math.random() - 0.5);
+    for (let i = 0; i < totalPlayers; i++) {
+        const isPlayer = i === 0;
+        const sp = spawnPoints[i];
+
+        const player = {
+            id: i,
+            name: isPlayer ? playerName : shuffledNames[i - 1] || ('Bot ' + i),
+            color: COLORS[i % COLORS.length],
+            isBot: !isPlayer,
+            alive: true,
+            troops: 0,
+            landCount: 0,
+            totalTroopsProduced: 0,
+            // Bot AI
+            ai: {
+                attackTimer: 0,
+                targetPlayer: -1,
+                aggression: 0.3 + Math.random() * 0.7,
+                expandRate: difficulty === 'easy' ? 0.3 : difficulty === 'hard' ? 0.9 : 0.6
+            }
+        };
+
+        GAME.players.push(player);
+
+        // Başlangıç topraklarını ver (daire şeklinde)
+        const radius = 3;
+        for (let dy = -radius; dy <= radius; dy++) {
+            for (let dx = -radius; dx <= radius; dx++) {
+                if (dx * dx + dy * dy > radius * radius) continue;
+                const nx = sp.x + dx;
+                const ny = sp.y + dy;
+                if (nx < 0 || nx >= GAME.gridW || ny < 0 || ny >= GAME.gridH) continue;
+                const idx = ny * GAME.gridW + nx;
+                if (GAME.grid[idx].owner === -2) continue;
+                GAME.grid[idx].owner = i;
+                GAME.grid[idx].troops = 2;
+            }
+        }
+    }
+
+    GAME.playerID = 0;
+    updatePlayerStats();
+
+    // Kamerayı oyuncu pozisyonuna getir
+    const sp = spawnPoints[0];
+    GAME.camera.x = sp.x * GAME.cellSize - canvas.width / 2;
+    GAME.camera.y = sp.y * GAME.cellSize - canvas.height / 2;
+    GAME.camera.zoom = 2;
+}
+
+function updatePlayerStats() {
+    GAME.players.forEach(p => {
+        p.troops = 0;
+        p.landCount = 0;
+    });
+
+    for (let i = 0; i < GAME.grid.length; i++) {
+        const cell = GAME.grid[i];
+        if (cell.owner >= 0) {
+            GAME.players[cell.owner].troops += cell.troops;
+            GAME.players[cell.owner].landCount++;
+        }
+    }
+
+    // Elenen oyuncuları kontrol et
+    GAME.players.forEach(p => {
+        if (p.alive && p.landCount === 0) {
+            p.alive = false;
+            GAME.eliminatedPlayers.add(p.id);
+            if (p.id === GAME.playerID) {
+                endGame(false);
+            } else {
+                addNotification(`${p.name} elendi!`, 'defeat');
+            }
+        }
+    });
+}
+
+// ==================================================================
+//  OYUN MEKANİKLERİ
+// ==================================================================
+function gameTick() {
+    if (!GAME.running || GAME.speed === 0) return;
+
+    GAME.tick++;
+
+    // Her tick'te asker üretimi
+    if (GAME.tick % 15 === 0) {
+        for (let i = 0; i < GAME.grid.length; i++) {
+            const cell = GAME.grid[i];
+            if (cell.owner >= 0 && cell.owner < GAME.players.length) {
+                // Arazi türüne göre üretim
+                let production = 0.5;
+                if (cell.terrain === 'plains') production = 0.8;
+                else if (cell.terrain === 'forest') production = 0.5;
+                else if (cell.terrain === 'mountain') production = 0.3;
+
+                cell.troops += production;
+                GAME.players[cell.owner].totalTroopsProduced += production;
+            }
+        }
+    }
+
+    // Bot AI
+    if (GAME.tick % 8 === 0) {
+        runBotAI();
+    }
+
+    // İstatistikleri güncelle
+    if (GAME.tick % 10 === 0) {
+        updatePlayerStats();
+        updateUI();
+        checkWinCondition();
+    }
+
+    GAME.time += 1 / 60;
+}
+
+function runBotAI() {
+    GAME.players.forEach(p => {
+        if (!p.isBot || !p.alive) return;
+
+        const diffMult = difficulty === 'easy' ? 0.4 : difficulty === 'hard' ? 1.2 : 0.7;
+
+        // Sınır hücrelerini bul
+        const borderCells = [];
+        for (let y = 0; y < GAME.gridH; y++) {
+            for (let x = 0; x < GAME.gridW; x++) {
+                const idx = y * GAME.gridW + x;
+                if (GAME.grid[idx].owner !== p.id) continue;
+
+                const neighbors = getNeighbors(x, y);
+                for (const n of neighbors) {
+                    const ni = n.y * GAME.gridW + n.x;
+                    const nc = GAME.grid[ni];
+                    if (nc.owner !== p.id && nc.owner !== -2) {
+                        borderCells.push({ x, y, nx: n.x, ny: n.y, targetOwner: nc.owner });
+                    }
+                }
+            }
+        }
+
+        if (borderCells.length === 0) return;
+
+        // Saldırı kararı
+        const attackChance = p.ai.aggression * p.ai.expandRate * diffMult;
+        const numAttacks = Math.floor(1 + attackChance * 3);
+
+        for (let a = 0; a < numAttacks; a++) {
+            if (borderCells.length === 0) break;
+
+            // Hedef seç (öncelik: sahipsiz arazi > zayıf düşman)
+            let best = null;
+            let bestScore = -Infinity;
+
+            for (const bc of borderCells) {
+                const targetIdx = bc.ny * GAME.gridW + bc.nx;
+                const targetCell = GAME.grid[targetIdx];
+                const sourceIdx = bc.y * GAME.gridW + bc.x;
+                const sourceCell = GAME.grid[sourceIdx];
+
+                let score = 0;
+                if (targetCell.owner === -1) {
+                    score = 10; // Sahipsiz arazi
+                } else if (targetCell.owner >= 0) {
+                    const enemy = GAME.players[targetCell.owner];
+                    score = 5 - targetCell.troops;
+                    if (enemy && enemy.landCount < p.landCount * 0.5) score += 3; // Zayıf düşman
+                }
+                score += sourceCell.troops * 0.5;
+                score += Math.random() * 3;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = bc;
+                }
+            }
+
+            if (best) {
+                const srcIdx = best.y * GAME.gridW + best.x;
+                const dstIdx = best.ny * GAME.gridW + best.nx;
+                const srcCell = GAME.grid[srcIdx];
+                const dstCell = GAME.grid[dstIdx];
+
+                const sendPercent = 0.3 + Math.random() * 0.5;
+                const attackTroops = Math.floor(srcCell.troops * sendPercent);
+
+                if (attackTroops > 1) {
+                    executeBattle(srcIdx, dstIdx, attackTroops, p.id);
+                }
+            }
+        }
+    });
+}
+
+function executeBattle(srcIdx, dstIdx, attackTroops, attackerID) {
+    const srcCell = GAME.grid[srcIdx];
+    const dstCell = GAME.grid[dstIdx];
+
+    if (srcCell.troops < attackTroops) attackTroops = Math.floor(srcCell.troops * 0.8);
+    if (attackTroops <= 0) return;
+
+    srcCell.troops -= attackTroops;
+
+    if (dstCell.owner === -2) return; // Denize saldırılamaz
+
+    if (dstCell.owner === -1) {
+        // Sahipsiz araziyi fethet
+        dstCell.owner = attackerID;
+        dstCell.troops = attackTroops;
+    } else if (dstCell.owner === attackerID) {
+        // Kendi toprağına takviye
+        dstCell.troops += attackTroops;
+    } else {
+        // Savaş!
+        const defenderTroops = dstCell.troops;
+        const defenderID = dstCell.owner;
+
+        // Arazi bonusu
+        let defenseBonus = 1.0;
+        if (dstCell.terrain === 'mountain') defenseBonus = 1.4;
+        else if (dstCell.terrain === 'forest') defenseBonus = 1.2;
+
+        const effectiveDefense = defenderTroops * defenseBonus;
+
+        if (attackTroops > effectiveDefense) {
+            // Saldırgan kazandı
+            const remaining = Math.floor(attackTroops - effectiveDefense * 0.7);
+            dstCell.owner = attackerID;
+            dstCell.troops = Math.max(1, remaining);
+
+            // Bildirim
+            if (attackerID === GAME.playerID) {
+                addNotification(`Toprak fethettiniz!`, 'capture');
+            } else if (defenderID === GAME.playerID) {
+                addNotification(`${GAME.players[attackerID].name} toprağınızı aldı!`, 'attack');
+            }
+        } else {
+            // Savunma kazandı
+            const remaining = Math.floor(effectiveDefense - attackTroops * 0.8);
+            dstCell.troops = Math.max(1, remaining);
+        }
+    }
+}
+
+// === OYUNCU SALDIRISI ===
+function playerAttack(targetX, targetY) {
+    const targetIdx = targetY * GAME.gridW + targetX;
+    const targetCell = GAME.grid[targetIdx];
+
+    if (targetCell.owner === -2) return; // Deniz
+    if (targetCell.owner === GAME.playerID && GAME.mode !== 'donate') return;
+
+    // Sınır komşu hücreleri bul
+    const neighbors = getNeighbors(targetX, targetY);
+    let bestSource = null;
+    let bestTroops = 0;
+
+    // Tüm oyuncunun sınır hücrelerinden saldır
+    const attackSources = [];
+
+    for (const n of neighbors) {
+        const ni = n.y * GAME.gridW + n.x;
+        if (GAME.grid[ni].owner === GAME.playerID) {
+            attackSources.push(ni);
+        }
+    }
+
+    if (attackSources.length === 0) {
+        // Uzaktan toplu saldırı - tüm sınırdan
+        massAttack(targetX, targetY);
+        return;
+    }
+
+    // Kaynaktan asker gönder
+    let totalSent = 0;
+    attackSources.forEach(srcIdx => {
+        const srcCell = GAME.grid[srcIdx];
+        const sendAmount = Math.floor(srcCell.troops * GAME.attackPercent / 100);
+        if (sendAmount > 0) {
+            totalSent += sendAmount;
+        }
+    });
+
+    if (totalSent > 0) {
+        // Her kaynaktan orantılı gönder
+        let troopsToSend = 0;
+        attackSources.forEach(srcIdx => {
+            const srcCell = GAME.grid[srcIdx];
+            const sendAmount = Math.floor(srcCell.troops * GAME.attackPercent / 100);
+            if (sendAmount > 0) {
+                troopsToSend += sendAmount;
+                srcCell.troops -= sendAmount;
+            }
+        });
+
+        if (GAME.mode === 'donate' && targetCell.owner >= 0 && targetCell.owner !== GAME.playerID) {
+            // Bağış modu - askerleri hedefe ekle (müttefik desteği)
+            targetCell.troops += troopsToSend;
+            addNotification(`${troopsToSend} asker bağışlandı`, 'capture');
+        } else {
+            executeBattle(attackSources[0], targetIdx, troopsToSend, GAME.playerID);
+        }
+    }
+}
+
+function massAttack(targetX, targetY) {
+    const targetIdx = targetY * GAME.gridW + targetX;
+    const targetCell = GAME.grid[targetIdx];
+    if (targetCell.owner === -2 || targetCell.owner === GAME.playerID) return;
+
+    // BFS ile hedefin çevresindeki tüm oyuncu hücrelerinden saldır
+    const visited = new Set();
+    const queue = [{ x: targetX, y: targetY, dist: 0 }];
+    visited.add(targetIdx);
+
+    const sources = [];
+    const maxDist = 15;
+
+    while (queue.length > 0) {
+        const p = queue.shift();
+        if (p.dist > maxDist) continue;
+
+        const neighbors = getNeighbors(p.x, p.y);
+        for (const n of neighbors) {
+            const ni = n.y * GAME.gridW + n.x;
+            if (visited.has(ni)) continue;
+            visited.add(ni);
+
+            if (GAME.grid[ni].owner === GAME.playerID) {
+                sources.push(ni);
+            }
+            queue.push({ x: n.x, y: n.y, dist: p.dist + 1 });
+        }
+    }
+
+    if (sources.length === 0) return;
+
+    // Tüm kaynaklardan asker topla
+    let totalTroops = 0;
+    sources.forEach(srcIdx => {
+        const sendAmount = Math.floor(GAME.grid[srcIdx].troops * GAME.attackPercent / 100);
+        if (sendAmount > 0) {
+            totalTroops += sendAmount;
+            GAME.grid[srcIdx].troops -= sendAmount;
+        }
+    });
+
+    if (totalTroops > 0) {
+        executeBattle(sources[0], targetIdx, totalTroops, GAME.playerID);
+    }
+}
+
+// ==================================================================
+//  RENDER
+// ==================================================================
+function render() {
+    ctx.fillStyle = '#0a1628';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (!GAME.running) return;
+
+    const cam = GAME.camera;
+    const cs = GAME.cellSize * cam.zoom;
+
+    // Görünür alan hesapla
+    const startX = Math.max(0, Math.floor(cam.x / (GAME.cellSize * cam.zoom)));
+    const startY = Math.max(0, Math.floor(cam.y / (GAME.cellSize * cam.zoom)));
+    const endX = Math.min(GAME.gridW, Math.ceil((cam.x + canvas.width) / (GAME.cellSize * cam.zoom)) + 1);
+    const endY = Math.min(GAME.gridH, Math.ceil((cam.y + canvas.height) / (GAME.cellSize * cam.zoom)) + 1);
+
+    // Hücreleri çiz
+    for (let y = startY; y < endY; y++) {
+        for (let x = startX; x < endX; x++) {
+            const idx = y * GAME.gridW + x;
+            const cell = GAME.grid[idx];
+            const sx = x * cs - cam.x;
+            const sy = y * cs - cam.y;
+
+            if (cell.owner === -2) {
+                // Deniz
+                const depth = 0.3 + cell.elevation * 0.5;
+                const r = Math.floor(10 * depth);
+                const g = Math.floor(30 * depth);
+                const b = Math.floor(60 + 40 * depth);
+                ctx.fillStyle = `rgb(${r},${g},${b})`;
+            } else if (cell.owner === -1) {
+                // Sahipsiz kara
+                if (cell.terrain === 'mountain') {
+                    ctx.fillStyle = '#4a4a3a';
+                } else if (cell.terrain === 'forest') {
+                    ctx.fillStyle = '#2a3a1a';
+                } else {
+                    ctx.fillStyle = '#3a3a2a';
+                }
+            } else {
+                // Oyuncu toprağı
+                const player = GAME.players[cell.owner];
+                if (player) {
+                    let color = player.color;
+                    // Yüksekliğe göre gölge
+                    const brightness = 0.7 + cell.elevation * 0.5;
+                    ctx.fillStyle = adjustBrightness(color, brightness);
+                }
+            }
+
+            ctx.fillRect(sx, sy, cs + 1, cs + 1);
+
+            // Sınır çiz (yakınlaştırıldığında)
+            if (cs > 4 && cell.owner >= 0) {
+                const neighbors = getNeighbors(x, y);
+                for (const n of neighbors) {
+                    const ni = n.y * GAME.gridW + n.x;
+                    if (GAME.grid[ni].owner !== cell.owner) {
+                        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                        ctx.lineWidth = 1;
+                        if (n.x < x) { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx, sy + cs); ctx.stroke(); }
+                        if (n.x > x) { ctx.beginPath(); ctx.moveTo(sx + cs, sy); ctx.lineTo(sx + cs, sy + cs); ctx.stroke(); }
+                        if (n.y < y) { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + cs, sy); ctx.stroke(); }
+                        if (n.y > y) { ctx.beginPath(); ctx.moveTo(sx, sy + cs); ctx.lineTo(sx + cs, sy + cs); ctx.stroke(); }
+                    }
+                }
+            }
+        }
+    }
+
+    // Asker sayıları (yakınlaştırılmışsa)
+    if (cs > 14) {
+        ctx.font = `${Math.max(8, cs * 0.4)}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let y = startY; y < endY; y++) {
+            for (let x = startX; x < endX; x++) {
+                const idx = y * GAME.gridW + x;
+                const cell = GAME.grid[idx];
+                if (cell.owner >= 0 && cell.troops > 0) {
+                    const sx = x * cs - cam.x + cs / 2;
+                    const sy = y * cs - cam.y + cs / 2;
+                    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                    ctx.fillText(Math.floor(cell.troops), sx, sy);
+                }
+            }
+        }
+    }
+
+    // Oyuncu etiketleri
+    if (cs > 3) {
+        GAME.players.forEach(p => {
+            if (!p.alive) return;
+            // Oyuncunun merkezini bul
+            let cx = 0, cy = 0, count = 0;
+            for (let y = startY; y < endY; y++) {
+                for (let x = startX; x < endX; x++) {
+                    const idx = y * GAME.gridW + x;
+                    if (GAME.grid[idx].owner === p.id) {
+                        cx += x; cy += y; count++;
+                    }
+                }
+            }
+            if (count > 0) {
+                cx = (cx / count) * cs - cam.x;
+                cy = (cy / count) * cs - cam.y;
+                const fontSize = Math.max(10, Math.min(18, cs * 1.5));
+                ctx.font = `bold ${fontSize}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.fillText(p.name, cx + 1, cy + 1);
+                ctx.fillStyle = '#fff';
+                ctx.fillText(p.name, cx, cy);
+
+                if (cs > 6) {
+                    ctx.font = `${fontSize * 0.7}px Arial`;
+                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                    ctx.fillText(`⚔${formatNum(p.troops)} 🏠${p.landCount}`, cx, cy + fontSize);
+                }
+            }
+        });
+    }
+
+    // Hover efekti
+    if (GAME.hoverCell) {
+        const hx = GAME.hoverCell.x * cs - cam.x;
+        const hy = GAME.hoverCell.y * cs - cam.y;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(hx, hy, cs, cs);
+
+        // Hover bilgisi
+        const idx = GAME.hoverCell.y * GAME.gridW + GAME.hoverCell.x;
+        const cell = GAME.grid[idx];
+        if (cell && cell.owner !== -2) {
+            const infoX = hx + cs + 5;
+            const infoY = hy;
+            ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            ctx.fillRect(infoX, infoY, 130, 55);
+            ctx.strokeStyle = '#555';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(infoX, infoY, 130, 55);
+
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#fff';
+            const ownerName = cell.owner === -1 ? 'Sahipsiz' : GAME.players[cell.owner]?.name || '?';
+            ctx.fillText(`Sahip: ${ownerName}`, infoX + 5, infoY + 15);
+            ctx.fillText(`Asker: ${Math.floor(cell.troops)}`, infoX + 5, infoY + 30);
+            ctx.fillText(`Arazi: ${cell.terrain === 'plains' ? 'Ova' : cell.terrain === 'forest' ? 'Orman' : cell.terrain === 'mountain' ? 'Dağ' : 'Deniz'}`, infoX + 5, infoY + 45);
+        }
+    }
+
+    // Mini harita
+    renderMinimap();
+}
+
+function renderMinimap() {
+    const mmW = 180, mmH = 180;
+    mmCtx.fillStyle = '#0a1628';
+    mmCtx.fillRect(0, 0, mmW, mmH);
+
+    const scaleX = mmW / GAME.gridW;
+    const scaleY = mmH / GAME.gridH;
+    const pxSize = Math.max(1, Math.ceil(Math.max(scaleX, scaleY)));
+
+    // Basitleştirilmiş render (her 2 hücrede bir)
+    const step = Math.max(1, Math.floor(2 / Math.max(scaleX, scaleY)));
+
+    for (let y = 0; y < GAME.gridH; y += step) {
+        for (let x = 0; x < GAME.gridW; x += step) {
+            const idx = y * GAME.gridW + x;
+            const cell = GAME.grid[idx];
+
+            if (cell.owner === -2) {
+                mmCtx.fillStyle = '#0a1a30';
+            } else if (cell.owner === -1) {
+                mmCtx.fillStyle = '#2a2a1a';
+            } else {
+                mmCtx.fillStyle = GAME.players[cell.owner]?.color || '#333';
+            }
+
+            mmCtx.fillRect(
+                Math.floor(x * scaleX),
+                Math.floor(y * scaleY),
+                pxSize + 1, pxSize + 1
             );
-            tree.rotation.y = Math.random() * Math.PI * 2;
-            scene.add(tree);
-            treesAll.push(tree);
         }
     }
 
-    // Mantarlar
-    for (let i = 0; i < 50; i++) {
-        const mushroom = createMushroom();
-        const segIdx = Math.floor(Math.random() * TOTAL_SEGMENTS * 0.6);
-        const seg = roadSegments[segIdx];
-        if (!seg) continue;
-        const side = Math.random() > 0.5 ? 1 : -1;
-        const offset = side * (ROAD_WIDTH / 2 + 0.8 + Math.random() * 4);
-        mushroom.position.set(
-            seg.worldX + Math.cos(seg.angle) * offset,
-            0,
-            seg.worldZ - Math.sin(seg.angle) * offset
-        );
-        scene.add(mushroom);
-        treesAll.push(mushroom);
+    // Kamera görüş alanı
+    const cam = GAME.camera;
+    const vx = (cam.x / (GAME.cellSize * cam.zoom)) * scaleX;
+    const vy = (cam.y / (GAME.cellSize * cam.zoom)) * scaleY;
+    const vw = (canvas.width / (GAME.cellSize * cam.zoom)) * scaleX;
+    const vh = (canvas.height / (GAME.cellSize * cam.zoom)) * scaleY;
+
+    mmCtx.strokeStyle = '#fff';
+    mmCtx.lineWidth = 1;
+    mmCtx.strokeRect(vx, vy, vw, vh);
+
+    // Minimap'i ekrana çiz
+    const mmDiv = document.getElementById('minimap');
+    const mmDivCtx = mmDiv.querySelector('canvas');
+    if (!mmDivCtx) {
+        mmDiv.innerHTML = '';
+        mmDiv.appendChild(mmCanvas);
+        mmCanvas.style.display = 'block';
+        mmCanvas.style.width = '100%';
+        mmCanvas.style.height = '100%';
     }
 }
 
-function createTree() {
-    const group = new THREE.Group();
-    const h = 4 + Math.random() * 10;
-    const r = 0.12 + Math.random() * 0.15;
-
-    const trunkGeo = new THREE.CylinderGeometry(r * 0.6, r, h, 6);
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a, roughness: 0.95 });
-    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-    trunk.position.y = h / 2;
-    trunk.castShadow = true;
-    group.add(trunk);
-
-    const leafColors = [0x0a4a0a, 0x0d5a0d, 0x085008, 0x0a3a0a];
-    const layers = 2 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < layers; i++) {
-        const leafH = 2 + Math.random() * 2.5;
-        const leafR = 1.2 + Math.random() * 1.5 - i * 0.3;
-        const leafGeo = new THREE.ConeGeometry(leafR, leafH, 7);
-        const leafMat = new THREE.MeshStandardMaterial({
-            color: leafColors[Math.floor(Math.random() * leafColors.length)], roughness: 0.9
-        });
-        const leaf = new THREE.Mesh(leafGeo, leafMat);
-        leaf.position.y = h * 0.5 + i * 1.5 + 1;
-        leaf.castShadow = true;
-        group.add(leaf);
-    }
-
-    if (Math.random() > 0.75) {
-        const gc = [0x00ff44, 0x44ff88, 0x00ffaa][Math.floor(Math.random() * 3)];
-        const glow = new THREE.PointLight(gc, 0.2, 6);
-        glow.position.y = h * 0.7;
-        group.add(glow);
-    }
-
-    return group;
+function adjustBrightness(hex, factor) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgb(${Math.min(255, Math.floor(r * factor))},${Math.min(255, Math.floor(g * factor))},${Math.min(255, Math.floor(b * factor))})`;
 }
 
-function createMushroom() {
-    const group = new THREE.Group();
-    const colors = [0xff4444, 0xff8844, 0xff44ff, 0x44aaff, 0xffff44];
-    const color = colors[Math.floor(Math.random() * colors.length)];
-
-    const stemGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.3, 6);
-    const stemMat = new THREE.MeshStandardMaterial({ color: 0xddccaa });
-    const stem = new THREE.Mesh(stemGeo, stemMat);
-    stem.position.y = 0.15;
-    group.add(stem);
-
-    const capGeo = new THREE.SphereGeometry(0.2, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2);
-    const capMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.8 });
-    const cap = new THREE.Mesh(capGeo, capMat);
-    cap.position.y = 0.3;
-    group.add(cap);
-
-    group.add(new THREE.PointLight(color, 0.12, 3));
-    return group;
+function formatNum(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return Math.floor(n).toString();
 }
 
-function createStarfield() {
-    const geo = new THREE.BufferGeometry();
-    const pos = [];
-    for (let i = 0; i < 4000; i++) {
-        pos.push((Math.random() - 0.5) * 500, Math.random() * 100 + 20, (Math.random() - 0.5) * 800 - 200);
-    }
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, transparent: true, opacity: 0.7 })));
+// ==================================================================
+//  UI GÜNCELLEME
+// ==================================================================
+function updateUI() {
+    const p = GAME.players[GAME.playerID];
+    if (!p) return;
+
+    document.getElementById('myLand').textContent = p.landCount;
+    document.getElementById('myTroops').textContent = formatNum(p.troops);
+    document.getElementById('myIncome').textContent = `+${formatNum(p.landCount * 0.8)}/s`;
+    document.getElementById('aliveCount').textContent = GAME.players.filter(p => p.alive).length;
+
+    const mins = Math.floor(GAME.time / 60);
+    const secs = Math.floor(GAME.time % 60);
+    document.getElementById('gameTime').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    updateLeaderboard();
 }
 
-function createFireflies() {
-    for (let i = 0; i < 50; i++) {
-        const c = [0x88ff44, 0x44ff88, 0xaaff00][Math.floor(Math.random() * 3)];
-        const geo = new THREE.SphereGeometry(0.05, 6, 6);
-        const mat = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.8 });
-        const ff = new THREE.Mesh(geo, mat);
-        ff.position.set(
-            (Math.random() - 0.5) * 40, 1 + Math.random() * 5, -Math.random() * 100
-        );
-        ff.userData = {
-            baseY: ff.position.y, baseX: ff.position.x,
-            sy: 0.5 + Math.random() * 1.5, sx: 0.3 + Math.random() * 0.8,
-            phase: Math.random() * Math.PI * 2
-        };
-        const light = new THREE.PointLight(c, 0.12, 4);
-        light.position.copy(ff.position);
-        scene.add(light);
-        ff.userData.light = light;
-        scene.add(ff);
-        fireflies.push(ff);
-    }
+function updateLeaderboard() {
+    const sorted = [...GAME.players]
+        .filter(p => p.alive)
+        .sort((a, b) => b.landCount - a.landCount);
+
+    let html = '';
+    sorted.forEach((p, i) => {
+        const isMe = p.id === GAME.playerID;
+        html += `
+            <div class="lb-entry ${isMe ? 'me' : ''}">
+                <span class="lb-rank">${i + 1}</span>
+                <div class="lb-color" style="background:${p.color}"></div>
+                <span class="lb-name">${p.name}</span>
+                <span class="lb-land">${p.landCount}</span>
+                <span class="lb-troops">${formatNum(p.troops)}</span>
+            </div>
+        `;
+    });
+    document.getElementById('lbEntries').innerHTML = html;
 }
 
-// ===================== ENGELLERs =====================
-function spawnObstacle() {
-    const seg = roadSegments[Math.min(currentSegment + 30 + Math.floor(Math.random() * 20), TOTAL_SEGMENTS - 1)];
-    if (!seg) return;
-
-    const lane = LANES[Math.floor(Math.random() * LANES.length)];
-    const types = ['log', 'rock', 'deer', 'fallen_tree'];
-    const type = types[Math.floor(Math.random() * types.length)];
-    let obstacle;
-
-    if (type === 'log') {
-        obstacle = new THREE.Group();
-        const logGeo = new THREE.CylinderGeometry(0.35, 0.4, 2.5, 8);
-        const logMat = new THREE.MeshStandardMaterial({ color: 0x4a2a0a, roughness: 0.95 });
-        const log = new THREE.Mesh(logGeo, logMat);
-        log.rotation.z = Math.PI / 2;
-        log.position.y = 0.4;
-        obstacle.add(log);
-    } else if (type === 'rock') {
-        obstacle = new THREE.Group();
-        const rockGeo = new THREE.DodecahedronGeometry(0.8, 1);
-        const rockMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.95, flatShading: true });
-        const rock = new THREE.Mesh(rockGeo, rockMat);
-        rock.position.y = 0.5;
-        rock.scale.set(1 + Math.random() * 0.5, 0.7, 1 + Math.random() * 0.3);
-        obstacle.add(rock);
-    } else if (type === 'deer') {
-        obstacle = new THREE.Group();
-        const deerMat = new THREE.MeshStandardMaterial({ color: 0x8B6914 });
-        const b = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.8), deerMat);
-        b.position.y = 1.2; obstacle.add(b);
-        const h = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.6), deerMat);
-        h.position.set(0, 1.7, -1); obstacle.add(h);
-        [[-0.25,0.4,-0.6],[0.25,0.4,-0.6],[-0.25,0.4,0.6],[0.25,0.4,0.6]].forEach(p => {
-            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.8,0.15), deerMat);
-            leg.position.set(...p); obstacle.add(leg);
-        });
-        for (let s of [-0.12, 0.12]) {
-            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05,6,6), new THREE.MeshBasicMaterial({color:0xffff44}));
-            eye.position.set(s, 1.8, -1.3); obstacle.add(eye);
-        }
-    } else {
-        obstacle = new THREE.Group();
-        const tGeo = new THREE.CylinderGeometry(0.25, 0.35, 4, 8);
-        const tMat = new THREE.MeshStandardMaterial({ color: 0x3a2208 });
-        const t = new THREE.Mesh(tGeo, tMat);
-        t.rotation.z = Math.PI / 2; t.position.y = 0.35;
-        obstacle.add(t);
-        const lc = new THREE.Mesh(new THREE.SphereGeometry(0.5,6,6), new THREE.MeshStandardMaterial({color:0x1a4a0a}));
-        lc.position.set(-1.8, 0.5, 0); lc.scale.set(1.5,0.8,1.2);
-        obstacle.add(lc);
-    }
-
-    // Segmente göre pozisyon
-    const perpX = Math.cos(seg.angle) * lane;
-    const perpZ = -Math.sin(seg.angle) * lane;
-    obstacle.position.set(seg.worldX + perpX, 0, seg.worldZ + perpZ);
-    obstacle.rotation.y = -seg.angle;
-    obstacle.userData = { type: 'obstacle', segIndex: seg.index };
-    scene.add(obstacle);
-    obstacles.push(obstacle);
-}
-
-function spawnCoin() {
-    const seg = roadSegments[Math.min(currentSegment + 25, TOTAL_SEGMENTS - 1)];
-    if (!seg) return;
-
-    const lane = LANES[Math.floor(Math.random() * LANES.length)];
-    const group = new THREE.Group();
-    const coinGeo = new THREE.TorusGeometry(0.35, 0.1, 8, 16);
-    group.add(new THREE.Mesh(coinGeo, new THREE.MeshBasicMaterial({ color: 0x44ff88 })));
-    group.add(new THREE.PointLight(0x44ff88, 0.4, 6));
-
-    const px = Math.cos(seg.angle) * lane;
-    const pz = -Math.sin(seg.angle) * lane;
-    group.position.set(seg.worldX + px, 1.2, seg.worldZ + pz);
-    group.userData = { type: 'coin', rotSpeed: 0.04, segIndex: seg.index };
-    scene.add(group);
-    coins.push(group);
-}
-
-// ===================== EFEKTLER =====================
-function createExplosion(pos, color) {
-    for (let i = 0; i < 25; i++) {
-        const s = 0.08 + Math.random() * 0.12;
-        const geo = new THREE.BoxGeometry(s, s, s);
-        const mat = new THREE.MeshBasicMaterial({ color: color || 0x44ff00, transparent: true, opacity: 1 });
-        const p = new THREE.Mesh(geo, mat);
-        p.position.copy(pos);
-        p.userData = {
-            vel: new THREE.Vector3((Math.random()-0.5)*0.4, Math.random()*0.4+0.1, (Math.random()-0.5)*0.4),
-            life: 1.0, decay: 0.015 + Math.random() * 0.01
-        };
-        scene.add(p);
-        particles.push(p);
-    }
-}
-
-function showNotification(text) {
-    const el = document.getElementById('notification');
+function addNotification(text, type = '') {
+    const el = document.createElement('div');
+    el.className = `notification ${type}`;
     el.textContent = text;
-    el.style.opacity = '1';
-    setTimeout(() => el.style.opacity = '0', 1000);
+    document.getElementById('notifications').appendChild(el);
+    setTimeout(() => el.remove(), 3000);
 }
 
-// ===================== HIZ GÖSTERGESİ =====================
-function updateSpeedometer(kmh) {
-    displaySpeed += (kmh - displaySpeed) * 0.08;
-    const clamped = Math.min(320, Math.max(0, displaySpeed));
-
-    // İbre açısı: 0 km/h = -135°, 320 km/h = 135°
-    const angle = -135 + (clamped / 320) * 270;
-    document.getElementById('speedo-needle').style.transform =
-        `translateX(-50%) rotate(${angle}deg)`;
-    document.getElementById('speedo-value').textContent = Math.floor(clamped);
-
-    // Vites hesapla
-    if (clamped < 40) currentGear = 1;
-    else if (clamped < 80) currentGear = 2;
-    else if (clamped < 130) currentGear = 3;
-    else if (clamped < 190) currentGear = 4;
-    else if (clamped < 260) currentGear = 5;
-    else currentGear = 6;
-
-    document.getElementById('gear').textContent = currentGear;
-
-    // RPM hesapla
-    const gearRanges = [
-        [0, 40], [40, 80], [80, 130], [130, 190], [190, 260], [260, 320]
-    ];
-    const range = gearRanges[currentGear - 1];
-    const rpmPercent = ((clamped - range[0]) / (range[1] - range[0])) * 100;
-    engineRPM = Math.max(15, Math.min(100, rpmPercent));
-    document.getElementById('rpm-fill').style.width = engineRPM + '%';
-
-    // RPM bar renk efekti
-    if (engineRPM > 80) {
-        document.getElementById('rpm-fill').style.boxShadow = '0 0 12px #ff2200';
-    } else {
-        document.getElementById('rpm-fill').style.boxShadow = '0 0 8px #00ff44';
+function checkWinCondition() {
+    const alive = GAME.players.filter(p => p.alive);
+    if (alive.length === 1 && alive[0].id === GAME.playerID) {
+        endGame(true);
+    }
+    // Toplam karanın %80'ini kontrol ediyorsa
+    const p = GAME.players[GAME.playerID];
+    const totalLand = GAME.grid.filter(c => c.owner !== -2).length;
+    if (p.landCount > totalLand * 0.8) {
+        endGame(true);
     }
 }
 
-// ===================== KONTROLLER =====================
-function moveLeft() {
-    if (currentLane > 0) { currentLane--; targetX = LANES[currentLane]; }
-}
-function moveRight() {
-    if (currentLane < LANES.length - 1) { currentLane++; targetX = LANES[currentLane]; }
+function endGame(won) {
+    GAME.running = false;
+    const p = GAME.players[GAME.playerID];
+    document.getElementById('goTitle').textContent = won ? '🏆 Zafer!' : '💀 Yenildin!';
+    document.getElementById('goStats').innerHTML =
+        `Süre: ${Math.floor(GAME.time / 60)}:${Math.floor(GAME.time % 60).toString().padStart(2, '0')}<br>` +
+        `Toprak: ${p.landCount} | Asker: ${formatNum(p.totalTroopsProduced)}`;
+    document.getElementById('goScore').textContent = `Skor: ${p.landCount * 100 + Math.floor(p.totalTroopsProduced)}`;
+    document.getElementById('gameOver').style.display = 'flex';
 }
 
+// ==================================================================
+//  GİRDİ YÖNETİMİ
+// ==================================================================
+canvas.addEventListener('mousedown', (e) => {
+    if (!GAME.running) return;
+    if (e.button === 0) {
+        // Sol tık - saldırı veya sürükleme
+        GAME.dragging = true;
+        GAME.dragStart = { x: e.clientX, y: e.clientY };
+        GAME.camStart = { x: GAME.camera.x, y: GAME.camera.y };
+    }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+    if (!GAME.running) return;
+
+    // Dünya koordinatı
+    const cs = GAME.cellSize * GAME.camera.zoom;
+    const worldX = (e.clientX + GAME.camera.x) / cs;
+    const worldY = (e.clientY + GAME.camera.y) / cs;
+    const gx = Math.floor(worldX);
+    const gy = Math.floor(worldY);
+
+    if (gx >= 0 && gx < GAME.gridW && gy >= 0 && gy < GAME.gridH) {
+        GAME.hoverCell = { x: gx, y: gy };
+    } else {
+        GAME.hoverCell = null;
+    }
+
+    if (GAME.dragging) {
+        const dx = e.clientX - GAME.dragStart.x;
+        const dy = e.clientY - GAME.dragStart.y;
+        GAME.camera.x = GAME.camStart.x - dx;
+        GAME.camera.y = GAME.camStart.y - dy;
+    }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+    if (!GAME.running) return;
+
+    if (GAME.dragging) {
+        const dx = Math.abs(e.clientX - GAME.dragStart.x);
+        const dy = Math.abs(e.clientY - GAME.dragStart.y);
+
+        // Eğer az hareket ettiyse tıklama say
+        if (dx < 5 && dy < 5) {
+            const cs = GAME.cellSize * GAME.camera.zoom;
+            const gx = Math.floor((e.clientX + GAME.camera.x) / cs);
+            const gy = Math.floor((e.clientY + GAME.camera.y) / cs);
+
+            if (gx >= 0 && gx < GAME.gridW && gy >= 0 && gy < GAME.gridH) {
+                playerAttack(gx, gy);
+            }
+        }
+
+        GAME.dragging = false;
+    }
+});
+
+canvas.addEventListener('wheel', (e) => {
+    if (!GAME.running) return;
+    e.preventDefault();
+
+    const oldZoom = GAME.camera.zoom;
+    if (e.deltaY < 0) {
+        GAME.camera.zoom = Math.min(GAME.camera.zoom * 1.15, 10);
+    } else {
+        GAME.camera.zoom = Math.max(GAME.camera.zoom / 1.15, 0.2);
+    }
+
+    // Fare noktasına doğru zoom
+    const zoomRatio = GAME.camera.zoom / oldZoom;
+    GAME.camera.x = e.clientX * (zoomRatio - 1) + GAME.camera.x * zoomRatio;
+    GAME.camera.y = e.clientY * (zoomRatio - 1) + GAME.camera.y * zoomRatio;
+}, { passive: false });
+
+// Minimap tıklama
+document.getElementById('minimap').addEventListener('click', (e) => {
+    const rect = e.target.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / rect.width;
+    const my = (e.clientY - rect.top) / rect.height;
+
+    const cs = GAME.cellSize * GAME.camera.zoom;
+    GAME.camera.x = mx * GAME.gridW * cs - canvas.width / 2;
+    GAME.camera.y = my * GAME.gridH * cs - canvas.height / 2;
+});
+
+// Klavye
+window.addEventListener('keydown', (e) => {
+    if (!GAME.running) return;
+    const moveSpeed = 20;
+    if (e.key === 'w' || e.key === 'ArrowUp') GAME.camera.y -= moveSpeed;
+    if (e.key === 's' || e.key === 'ArrowDown') GAME.camera.y += moveSpeed;
+    if (e.key === 'a' || e.key === 'ArrowLeft') GAME.camera.x -= moveSpeed;
+    if (e.key === 'd' || e.key === 'ArrowRight') GAME.camera.x += moveSpeed;
+    if (e.key === ' ') {
+        // Oyuncu topraklarına odaklan
+        let cx = 0, cy = 0, count = 0;
+        for (let y = 0; y < GAME.gridH; y++) {
+            for (let x = 0; x < GAME.gridW; x++) {
+                if (GAME.grid[y * GAME.gridW + x].owner === GAME.playerID) {
+                    cx += x; cy += y; count++;
+                }
+            }
+        }
+        if (count > 0) {
+            const cs = GAME.cellSize * GAME.camera.zoom;
+            GAME.camera.x = (cx / count) * cs - canvas.width / 2;
+            GAME.camera.y = (cy / count) * cs - canvas.height / 2;
+        }
+    }
+});
+
+// Dokunmatik
+let touchStart = null;
+let touchDist = 0;
+
+canvas.addEventListener('touchstart', (e) => {
+    if (!GAME.running) return;
+    e.preventDefault();
+
+    if (e.touches.length === 1) {
+        touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        GAME.camStart = { x: GAME.camera.x, y: GAME.camera.y };
+    } else if (e.touches.length === 2) {
+        touchDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!GAME.running) return;
+    e.preventDefault();
+
+    if (e.touches.length === 1 && touchStart) {
+        const dx = e.touches[0].clientX - touchStart.x;
+        const dy = e.touches[0].clientY - touchStart.y;
+        GAME.camera.x = GAME.camStart.x - dx;
+        GAME.camera.y = GAME.camStart.y - dy;
+    } else if (e.touches.length === 2) {
+        const newDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+        const ratio = newDist / touchDist;
+        GAME.camera.zoom = Math.max(0.2, Math.min(10, GAME.camera.zoom * ratio));
+        touchDist = newDist;
+    }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+    if (!GAME.running) return;
+
+    if (e.changedTouches.length === 1 && touchStart) {
+        const dx = Math.abs(e.changedTouches[0].clientX - touchStart.x);
+        const dy = Math.abs(e.changedTouches[0].clientY - touchStart.y);
+
+        if (dx < 10 && dy < 10) {
+            const cs = GAME.cellSize * GAME.camera.zoom;
+            const gx = Math.floor((e.changedTouches[0].clientX + GAME.camera.x) / cs);
+            const gy = Math.floor((e.changedTouches[0].clientY + GAME.camera.y) / cs);
+            if (gx >= 0 && gx < GAME.gridW && gy >= 0 && gy < GAME.gridH) {
+                playerAttack(gx, gy);
+            }
+        }
+    }
+    touchStart = null;
+});
+
+// ==================================================================
+//  OYUN BAŞLATMA & DÖNGÜ
+// ==================================================================
 function startGame() {
-    score = 0; lives = 3; speed = INITIAL_SPEED;
-    currentLane = 1; targetX = LANES[1]; carX = LANES[1];
-    gameRunning = true; invincible = false; comboCount = 0;
-    totalDistance = 0; currentSegment = 0;
-    carTilt = 0; carSway = 0; steeringAngle = 0;
-    displaySpeed = 0;
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('topBar').style.display = 'flex';
+    document.getElementById('leaderboard').style.display = 'block';
+    document.getElementById('minimap').style.display = 'block';
+    document.getElementById('controls').style.display = 'block';
+    document.getElementById('zoomControls').style.display = 'flex';
+    document.getElementById('speedControls').style.display = 'flex';
+    document.getElementById('gameOver').style.display = 'none';
 
-    obstacles.forEach(o => scene.remove(o));
-    coins.forEach(c => scene.remove(c));
-    particles.forEach(p => scene.remove(p));
-    obstacles = []; coins = []; particles = [];
+    generateMap();
+    createPlayers();
 
-    // Yeni viraj yolu oluştur
-    generateRoadCurve();
-    updateRoadPositions();
+    GAME.running = true;
+    GAME.time = 0;
+    GAME.tick = 0;
+    GAME.speed = 1;
 
-    document.getElementById('overlay').style.display = 'none';
-    document.getElementById('lives').textContent = '❤️❤️❤️';
+    document.querySelectorAll('.speed-btn').forEach(e => e.classList.remove('active'));
+    document.querySelector('.speed-btn[data-speed="1"]').classList.add('active');
+
     updateUI();
 }
 
-function gameOver() {
-    gameRunning = false;
-    document.getElementById('overlay').style.display = 'flex';
-    document.getElementById('overlay').querySelector('h1').textContent = '💥 Oyun Bitti!';
-    document.getElementById('overlay').querySelector('h2').innerHTML =
-        `Mesafe: ${Math.floor(totalDistance)} m<br>Maks Hız: ${Math.floor(speed * 130)} km/h`;
-    document.getElementById('finalScore').textContent = `Final Skor: ${score}`;
-    document.getElementById('finalScore').style.display = 'block';
-    document.getElementById('startBtn').textContent = 'TEKRAR OYNA';
-}
+// Ana oyun döngüsü
+let lastTime = 0;
+let tickAccumulator = 0;
+const TICK_RATE = 1000 / 30; // 30 tick/saniye
 
-function updateUI() {
-    document.getElementById('score').textContent = `Skor: ${score}`;
-    document.getElementById('distance').textContent = `Mesafe: ${Math.floor(totalDistance)} m`;
-    document.getElementById('lives').textContent = '❤️'.repeat(lives) + '🖤'.repeat(Math.max(0, 3 - lives));
-}
+function gameLoop(timestamp) {
+    requestAnimationFrame(gameLoop);
 
-function checkCollision(obj) {
-    const carBox = new THREE.Box3();
-    // Araba kutusunu dünya pozisyonunda hesapla
-    const carWorldPos = new THREE.Vector3();
-    car.getWorldPosition(carWorldPos);
-    carBox.setFromCenterAndSize(carWorldPos, new THREE.Vector3(1.2, 1, 2.5));
+    const dt = timestamp - lastTime;
+    lastTime = timestamp;
 
-    const objBox = new THREE.Box3().setFromObject(obj);
-    return carBox.intersectsBox(objBox);
-}
+    if (GAME.running && GAME.speed > 0) {
+        tickAccumulator += dt * GAME.speed;
 
-// ===================== ANA DÖNGÜ =====================
-function animate() {
-    requestAnimationFrame(animate);
-    const delta = clock.getDelta();
-    const time = clock.getElapsedTime();
-
-    if (gameRunning) {
-        // Giriş
-        if ((keys['a'] || keys['arrowleft']) && !keys._lp) { keys._lp = true; moveLeft(); }
-        if (!(keys['a'] || keys['arrowleft'])) keys._lp = false;
-        if ((keys['d'] || keys['arrowright']) && !keys._rp) { keys._rp = true; moveRight(); }
-        if (!(keys['d'] || keys['arrowright'])) keys._rp = false;
-
-        boosting = keys['w'] || keys['arrowup'];
-        braking = keys['s'] || keys['arrowdown'];
-
-        // Hız
-        if (braking) {
-            speed = Math.max(0.15, speed - 0.003);
-        } else {
-            speed = Math.min(speed + SPEED_INCREMENT, MAX_SPEED);
+        while (tickAccumulator >= TICK_RATE) {
+            gameTick();
+            tickAccumulator -= TICK_RATE;
         }
-        const currentSpeed = boosting ? speed * 1.5 : speed;
-        totalDistance += currentSpeed * 0.5;
-
-        // Segment ilerlemesi
-        currentSegment = Math.floor(totalDistance / SEGMENT_LENGTH);
-        if (currentSegment >= TOTAL_SEGMENTS - 50) {
-            // Yolu uzat - yeni virajlar ekle
-            const oldLen = roadCurve.length;
-            let cc = roadCurve[oldLen - 1] || 0;
-            let ct = 0, timer = 0;
-            for (let i = 0; i < 200; i++) {
-                timer--;
-                if (timer <= 0) {
-                    const diff = Math.min(1, (oldLen + i) / 500);
-                    ct = (Math.random() - 0.5) * 0.035 * (1 + diff);
-                    if (Math.random() > 0.6) ct = 0;
-                    timer = 30 + Math.floor(Math.random() * 80);
-                }
-                cc += (ct - cc) * 0.02;
-                roadCurve.push(cc);
-            }
-        }
-
-        // Mevcut segment verisi
-        const segIdx = Math.min(currentSegment, roadSegments.length - 1);
-        const seg = roadSegments[segIdx];
-        const nextSeg = roadSegments[Math.min(segIdx + 1, roadSegments.length - 1)];
-
-        if (seg) {
-            const curveVal = roadCurve[segIdx] || 0;
-            currentRoadAngle = seg.angle;
-
-            // Şerit geçişi (yumuşak)
-            carX += (targetX - carX) * 0.08;
-
-            // Araba dünya pozisyonu
-            const perpX = Math.cos(seg.angle) * carX;
-            const perpZ = -Math.sin(seg.angle) * carX;
-            carWorldX = seg.worldX + perpX;
-            carWorldZ = seg.worldZ + perpZ;
-
-            car.position.set(carWorldX, 0, carWorldZ);
-            car.rotation.y = -seg.angle;
-
-            // === GERÇEKÇİ DÖNÜŞ HİSSİYATI ===
-
-            // 1. Virajda araba yatma (roll)
-            const targetTilt = -curveVal * 80 * currentSpeed;
-            carTilt += (targetTilt - carTilt) * 0.06;
-            carModel.rotation.z = carTilt;
-
-            // 2. Şerit değiştirirken eğilme
-            const laneDiff = (targetX - carX);
-            steeringAngle += (laneDiff * 0.15 - steeringAngle) * 0.08;
-            carModel.rotation.z += steeringAngle;
-
-            // 3. Virajda burun kıvırma (yaw)
-            const yawTarget = -curveVal * 15 * currentSpeed + laneDiff * 0.02;
-            carSway += (yawTarget - carSway) * 0.05;
-            carModel.rotation.y = carSway;
-
-            // 4. Hızlanma/fren eğimi (pitch)
-            let pitchTarget = 0;
-            if (boosting) pitchTarget = 0.03;
-            if (braking) pitchTarget = -0.05;
-            carModel.rotation.x += (pitchTarget - carModel.rotation.x) * 0.06;
-
-            // 5. Süspansiyon salınımı
-            carBounce = Math.sin(time * 15) * currentSpeed * 0.008 + Math.sin(time * 23) * 0.003;
-            carModel.position.y = carBounce;
-
-            // 6. Fren lambası
-            const bl = carModel.getObjectByName('brakeLight');
-            if (bl) bl.material.opacity = braking ? 0.9 : 0;
-
-            // 7. Tekerlek dönüşü
-            wheelAngle += currentSpeed * 0.5;
-            for (let i = 0; i < 4; i++) {
-                const w = carModel.getObjectByName('wheel_' + i);
-                if (w) {
-                    w.rotation.x = wheelAngle;
-                    // Ön tekerlekler virajda döner
-                    if (i < 2) w.rotation.z = Math.PI / 2 + steeringAngle * 0.3;
-                }
-            }
-
-            // === KAMERA ===
-            const camDist = 10 + (boosting ? 2 : 0);
-            const camHeight = 4.5 + (boosting ? -0.5 : 0) + (braking ? 0.5 : 0);
-            const camBehindX = carWorldX + Math.sin(seg.angle) * camDist;
-            const camBehindZ = carWorldZ + Math.cos(seg.angle) * camDist;
-
-            // Virajda kamera kaydırma (drift hissi)
-            const camLateralOffset = curveVal * 60 * currentSpeed;
-            const camOffsetX = Math.cos(seg.angle) * camLateralOffset;
-            const camOffsetZ = -Math.sin(seg.angle) * camLateralOffset;
-
-            const shX = shakeAmount * (Math.random() - 0.5) * 0.5;
-            const shY = shakeAmount * (Math.random() - 0.5) * 0.3;
-            shakeAmount *= 0.88;
-
-            camera.position.x += (camBehindX + camOffsetX + shX - camera.position.x) * 0.06;
-            camera.position.z += (camBehindZ + camOffsetZ - camera.position.z) * 0.06;
-            camera.position.y += (camHeight + shY - camera.position.y) * 0.08;
-
-            const lookAheadSeg = roadSegments[Math.min(segIdx + 8, roadSegments.length - 1)];
-            if (lookAheadSeg) {
-                const lookTarget = new THREE.Vector3(lookAheadSeg.worldX, 1, lookAheadSeg.worldZ);
-                camera.lookAt(lookTarget);
-            }
-
-            // FOV
-            const targetFov = boosting ? 80 : braking ? 60 : 68;
-            camera.fov += (targetFov - camera.fov) * 0.05;
-            camera.updateProjectionMatrix();
-
-            // Viraj uyarısı
-            const futureCurve = roadCurve[segIdx + 15] || 0;
-            if (Math.abs(futureCurve) > 0.015) {
-                const dir = futureCurve > 0 ? '⟵ VİRAJ' : 'VİRAJ ⟶';
-                document.getElementById('curve-warning').textContent = dir;
-                document.getElementById('curve-warning').style.opacity = '0.6';
-            } else {
-                document.getElementById('curve-warning').style.opacity = '0';
-            }
-        }
-
-        // Skor
-        score += Math.floor(currentSpeed * 2);
-
-        // Engel oluşturma
-        distanceSinceObstacle += currentSpeed;
-        if (distanceSinceObstacle > nextObstacleDistance) {
-            spawnObstacle();
-            if (speed > 0.7 && Math.random() > 0.4) spawnObstacle();
-            distanceSinceObstacle = 0;
-            nextObstacleDistance = 30 + Math.random() * 40 - speed * 6;
-            nextObstacleDistance = Math.max(18, nextObstacleDistance);
-        }
-
-        // Coin
-        distanceSinceCoin += currentSpeed;
-        if (distanceSinceCoin > 22) { spawnCoin(); distanceSinceCoin = 0; }
-
-        // Engel kontrol
-        for (let i = obstacles.length - 1; i >= 0; i--) {
-            const obs = obstacles[i];
-            const dist = car.position.distanceTo(obs.position);
-            if (dist > 80) {
-                if (obs.userData.segIndex < currentSegment - 5) {
-                    scene.remove(obs); obstacles.splice(i, 1);
-                }
-                continue;
-            }
-            if (!invincible && checkCollision(obs)) {
-                createExplosion(obs.position, 0xff4400);
-                scene.remove(obs); obstacles.splice(i, 1);
-                lives--; shakeAmount = 2;
-                speed = Math.max(INITIAL_SPEED, speed - 0.2);
-                comboCount = 0;
-                invincible = true;
-                setTimeout(() => invincible = false, 1500);
-                if (lives <= 0) gameOver();
-                updateUI();
-            }
-        }
-
-        // Coin kontrol
-        for (let i = coins.length - 1; i >= 0; i--) {
-            const coin = coins[i];
-            coin.rotation.y += coin.userData.rotSpeed;
-            coin.position.y = 1.2 + Math.sin(time * 3 + i) * 0.3;
-
-            if (coin.userData.segIndex < currentSegment - 5) {
-                scene.remove(coin); coins.splice(i, 1); continue;
-            }
-
-            if (checkCollision(coin)) {
-                comboCount++; comboTimer = 3;
-                score += 200 * comboCount;
-                createExplosion(coin.position, 0x44ff88);
-                scene.remove(coin); coins.splice(i, 1);
-                document.getElementById('combo').textContent = `🌟 Kombo x${comboCount}! +${200 * comboCount}`;
-                document.getElementById('combo').style.opacity = '1';
-                if (comboCount === 5) showNotification('🔥 SÜPER!');
-                if (comboCount === 10) showNotification('⚡ EFSANE!');
-                updateUI();
-            }
-        }
-
-        // Invincible blink
-        if (invincible) car.visible = Math.floor(Date.now() / 80) % 2 === 0;
-        else car.visible = true;
-
-        // Kombo timer
-        if (comboTimer > 0) {
-            comboTimer -= delta;
-            if (comboTimer <= 0) {
-                comboCount = 0;
-                document.getElementById('combo').style.opacity = '0';
-            }
-        }
-
-        // Hız göstergesi güncelle
-        const kmh = currentSpeed * 130;
-        updateSpeedometer(kmh);
-        updateUI();
     }
 
-    // Partiküller
-    for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.position.add(p.userData.vel);
-        p.userData.vel.y -= 0.008;
-        p.userData.life -= p.userData.decay;
-        p.material.opacity = p.userData.life;
-        p.scale.setScalar(Math.max(0.01, p.userData.life));
-        if (p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); }
-    }
-
-    // Ateş böcekleri kamerayı takip
-    fireflies.forEach((ff, idx) => {
-        ff.position.y = ff.userData.baseY + Math.sin(time * ff.userData.sy + ff.userData.phase) * 0.8;
-        ff.material.opacity = 0.4 + Math.sin(time * 3 + idx) * 0.4;
-        if (ff.userData.light) {
-            ff.userData.light.position.copy(ff.position);
-            ff.userData.light.intensity = 0.08 + Math.sin(time * 3 + idx) * 0.08;
-        }
-        // Kamerayı izle
-        const dist = camera.position.distanceTo(ff.position);
-        if (dist > 60) {
-            ff.position.x = camera.position.x + (Math.random() - 0.5) * 40;
-            ff.position.z = camera.position.z - Math.random() * 50;
-            ff.userData.baseX = ff.position.x;
-            ff.userData.baseY = 1 + Math.random() * 5;
-        }
-    });
-
-    // Dağları kamerayı takip ettir (paralaks)
-    mountains.forEach(m => {
-        if (gameRunning) {
-            m.position.z = camera.position.z - 200 + (m.position.x * 0.2);
-        }
-    });
-
-    // Sis yoğunluğu hızla değişsin
-    scene.fog.density = 0.005 + speed * 0.002;
-
-    renderer.render(scene, camera);
+    render();
 }
 
-function onResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-init();
+requestAnimationFrame(gameLoop);
 </script>
 </body>
 </html>
