@@ -1,677 +1,1285 @@
-
-</html>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌲 Orman Yarışçısı - Virajlı Yollar</title>
+    <style>
+        * { margin: 0; padding: 0; overflow: hidden; }
+        body { background: #000; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        canvas { display: block; }
 
+        #ui {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
 
-<style>
+        #score {
+            position: absolute; top: 20px; left: 20px;
+            color: #fff; font-size: 26px; font-weight: bold;
+            text-shadow: 0 0 10px #0f0, 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        #distance {
+            position: absolute; top: 55px; left: 20px;
+            color: #8f8; font-size: 16px;
+            text-shadow: 0 0 6px #0a0;
+        }
+        #lives {
+            position: absolute; top: 20px; right: 20px;
+            color: #f44; font-size: 28px;
+        }
+        #combo {
+            position: absolute; top: 90px; left: 20px;
+            color: #ffdd00; font-size: 18px;
+            text-shadow: 0 0 10px #ffdd00;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        #notification {
+            position: absolute; top: 40%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffdd00; font-size: 42px; font-weight: bold;
+            text-shadow: 0 0 20px #ffdd00, 0 0 40px #ff8800;
+            opacity: 0; pointer-events: none; transition: all 0.5s;
+        }
 
-/* -----------------------------
-GENEL AYARLAR
------------------------------ */
+        /* === HIZ GÖSTERGESİ === */
+        #speedometer {
+            position: absolute;
+            bottom: 20px; right: 20px;
+            width: 200px; height: 200px;
+        }
+        .speedo-bg {
+            position: relative;
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 50% 60%, #0a0a0a 0%, #1a1a2a 60%, #0a0a15 100%);
+            border: 3px solid #333;
+            box-shadow: 0 0 20px rgba(0,255,68,0.2), inset 0 0 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+        .speedo-ring {
+            position: absolute;
+            top: 10px; left: 10px;
+            width: 176px; height: 176px;
+            border-radius: 50%;
+            border: 2px solid #1a3a1a;
+        }
 
-*{
-  margin:0;
-  padding:0;
-  box-sizing: border-box;
-  font-family:fantasy;
-  font-size: 30px;
-}
+        .speedo-marks {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
 
-body{
-  background:#141b2b;
-  color:white;
-  scroll-behavior:smooth;
-}
+        .speedo-needle {
+            position: absolute;
+            bottom: 50%; left: 50%;
+            width: 3px; height: 75px;
+            background: linear-gradient(to top, #ff2200, #ff4400, #ff6600);
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(-135deg);
+            transition: transform 0.15s ease-out;
+            border-radius: 2px;
+            box-shadow: 0 0 8px #ff4400;
+            z-index: 10;
+        }
+        .speedo-needle::after {
+            content: '';
+            position: absolute;
+            bottom: -6px; left: 50%;
+            transform: translateX(-50%);
+            width: 14px; height: 14px;
+            background: radial-gradient(circle, #ff4400, #aa0000);
+            border-radius: 50%;
+            box-shadow: 0 0 10px #ff4400;
+        }
 
-/* -----------------------------
-NAVBAR
------------------------------ */
-nav{
-  position:relative;
-  top:0;
-  width:100%;
-  background:#020617;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:15px 50px;
-  z-index:1000;
-  box-shadow:0 0 8px rgb(255, 255, 255);
-  
-}
-.logo{
-  font-size:40px;
-  font-weight:10px;
-  color:#33ff00;
-  text-shadow: 0 0 30px white;
+        .speedo-value {
+            position: absolute;
+            bottom: 40px; left: 50%;
+            transform: translateX(-50%);
+            color: #0f0; font-size: 28px; font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 10px #0f0;
+            z-index: 5;
+        }
+        .speedo-unit {
+            position: absolute;
+            bottom: 25px; left: 50%;
+            transform: translateX(-50%);
+            color: #484; font-size: 11px;
+            letter-spacing: 2px;
+            z-index: 5;
+        }
+        .speedo-label {
+            position: absolute;
+            top: 60px; left: 50%;
+            transform: translateX(-50%);
+            color: #2a5a2a; font-size: 9px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            z-index: 5;
+        }
 
-}
-nav ul{
-  display:flex;
-  list-style:none;
-  color: rgb(0, 0, 0);
-}
-nav ul li{
-  margin-left:30px;
-}
-nav ul li a{
-  text-decoration:none;
-  color:rgba(201, 201, 201, 0.671);
-  transition:0.3s;
-}
-nav ul li a:hover{
-  color:#ffffff;
-}
+        /* RPM Barı */
+        #rpm-bar {
+            position: absolute;
+            bottom: 230px; right: 20px;
+            width: 200px; height: 14px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 7px;
+            overflow: hidden;
+        }
+        #rpm-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00ff44, #44ff00, #aaff00, #ffff00, #ff8800, #ff2200);
+            border-radius: 7px;
+            transition: width 0.1s;
+            box-shadow: 0 0 8px #00ff44;
+        }
+        #rpm-label {
+            position: absolute;
+            bottom: 248px; right: 20px;
+            color: #585; font-size: 11px;
+            letter-spacing: 1px;
+        }
 
-/* -----------------------------
-HERO
------------------------------ */
-.hero{
-  height:100vh;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-  text-align:center;
-  padding-bottom: 400px;
-  position: center;
-}
-.hero h1{
-  position: relative;
-  font-size:70px;
-  margin-bottom:20px;
-  color:#ffffff;
-  text-shadow:0 0 20px #000000;
-  background-color: #1e293b;
-  height: 90px;
-  width: 450px;
-  border: 5px #000000;
-  border-radius: 10px;
-  text-align: center;
-  box-shadow:0 0 20px #f7f7f7;
-  margin: 40px;
-  
-}
+        /* Vites Göstergesi */
+        #gear {
+            position: absolute;
+            bottom: 160px; right: 88px;
+            color: #0f0; font-size: 36px; font-weight: bold;
+            font-family: 'Courier New', monospace;
+            text-shadow: 0 0 15px #0f0;
+        }
+        #gear-label {
+            position: absolute;
+            bottom: 148px; right: 68px;
+            color: #383; font-size: 10px;
+            letter-spacing: 2px;
+        }
 
-.hero p{
-  font-size:39px;
-  opacity:0.8;
-  margin-bottom: 10px;
-}
-.scrollBtn{
-  margin-top:40px;
-  margin: 10px;
-  padding:15px 35px;
-  border:none;
-  border-radius:8px;
-  background:#00ff5e;
-  font-size:18px;
-  cursor:pointer;
-  box-shadow:0 0 20px rgb(255, 255, 255) ;
-}
+        /* Viraj Uyarı */
+        #curve-warning {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffaa00;
+            font-size: 50px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            text-shadow: 0 0 20px #ffaa00;
+        }
 
-.scrollBtn:hover{
-box-shadow:0 0 20px rgb(0, 255, 115);
-
-
-
-}
-/* -----------------------------
-DOWNLOAD SECTION
------------------------------ */
-.download-section{
-  padding:10px 10%;
-}
-.section-title{
-  font-size:40px;
-  margin-bottom:60px;
-  text-align:center;
-  background-color: rgb(126, 126, 126);
-}
-
-/* grid */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-  gap:370px;
-
-}
-
-/* card */
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-  gap:200px;
-
-}
-
-/* card */
-.card{
-  background:#352d2d;
-  border-radius:15px;
-  padding:20px;
-  transition:0.4s;
-  box-shadow:0 0 20px rgb(0, 0, 0);
-  width: 330px; 
-  
-}
-@keyframes neonBlink{
-  0%{ box-shadow:0 0 15px #000000, 0 0 20px #000000,0 0 30px #000000; }
-  50%{ box-shadow:0 0 15px #4f504f, 0 0 20px #4f504f,0 0 30px #4f504f; }
-  100%{ box-shadow:0 0 15px #ffffff,0 0 20px #ffffff,0 0 30px #ffffff; }
-
-}
-
-.card:hover{
-  
- animation: neonBlink 1.5s infinite alternate;
-}
-
-
-
-.card iframe{
-  width: 290px;
-  margin-bottom: 55px;
-}
-
-
-
-.card h3{
-  margin-bottom:10px;
-  font-family: Arial, Helvetica, sans-serif;
-} 
-.card p{
-  font-size:25px;
-  opacity:0.7;
-}
-
-.card button{
-  background-color: rgb(0, 255, 0);
-  border-radius: 12px;
-  font-family: fantasy;
-  width: 290px;
-  height: 60px ;
-}
-
-/* -----------------------------
-REKLAMLAR
------------------------------ */
-
-
-
-/* -----------------------------
-FOOTER
------------------------------ */
-footer{
-  margin-left: 100px;
-  margin-right: 100px;
-  margin-bottom: 30px;
-  background:#474545;
-  padding:10px;
-  text-align:center;
-  margin-top:100px;
-  border-radius: 25px;
-  border: #ffffff;
-  box-shadow: 0 0 20px #afafaf;
-}
-
-
-footer p{
-  opacity:0.7;
-  font-family: fantasy;
-
-}
-
-/* -----------------------------
-MOBILE
------------------------------ */
-@media(max-width:1000px){
-  .leftAd,
-  .rightAd{
-    display:none;
-  }
-  .hero h1{
-    font-size:45px;
-  }
-}
-
-
-
-</style>
+        /* === OVERLAY === */
+        #overlay {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            background: rgba(0,10,0,0.88);
+            pointer-events: all; z-index: 100;
+        }
+        #overlay h1 {
+            color: #fff; font-size: 48px; margin-bottom: 10px;
+            text-shadow: 0 0 20px #0a4, 0 0 40px #0f0;
+        }
+        #overlay h2 {
+            color: #8b8; font-size: 20px; margin-bottom: 30px;
+            font-weight: normal; text-align: center; line-height: 1.6;
+        }
+        .final-score {
+            color: #0f0; font-size: 30px; margin-bottom: 20px;
+            text-shadow: 0 0 15px #0f0;
+        }
+        #overlay button {
+            padding: 15px 50px; font-size: 22px;
+            border: 2px solid #0f0; background: transparent;
+            color: #0f0; border-radius: 50px; cursor: pointer;
+            transition: all 0.3s; text-transform: uppercase; letter-spacing: 3px;
+        }
+        #overlay button:hover {
+            background: #0f0; color: #000;
+            box-shadow: 0 0 30px #0f0, 0 0 60px #0a4;
+        }
+        .controls-info {
+            color: #6a6; font-size: 14px; margin-top: 25px;
+            text-align: center; line-height: 1.8;
+        }
+    </style>
 </head>
-
 <body>
 
-<div class="card">
-  
+<div id="ui">
+    <div id="score">Skor: 0</div>
+    <div id="distance">Mesafe: 0 m</div>
+    <div id="lives">❤️❤️❤️</div>
+    <div id="combo"></div>
+    <div id="notification"></div>
+    <div id="curve-warning"></div>
+
+    <!-- Hız Göstergesi -->
+    <div id="speedometer">
+        <div class="speedo-bg">
+            <div class="speedo-ring"></div>
+            <svg class="speedo-marks" viewBox="0 0 200 200">
+                <defs>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+                        <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+                <!-- Büyük çizgiler ve sayılar -->
+                <g filter="url(#glow)">
+                    <!-- 0 -->
+                    <line x1="38" y1="162" x2="48" y2="152" stroke="#0f0" stroke-width="2"/>
+                    <text x="28" y="172" fill="#0a0" font-size="11" font-family="Courier New">0</text>
+                    <!-- 40 -->
+                    <line x1="18" y1="110" x2="30" y2="110" stroke="#0f0" stroke-width="2"/>
+                    <text x="8" y="114" fill="#0a0" font-size="11" font-family="Courier New">40</text>
+                    <!-- 80 -->
+                    <line x1="30" y1="58" x2="42" y2="65" stroke="#0f0" stroke-width="2"/>
+                    <text x="16" y="55" fill="#0a0" font-size="11" font-family="Courier New">80</text>
+                    <!-- 120 -->
+                    <line x1="70" y1="24" x2="76" y2="36" stroke="#0f0" stroke-width="2"/>
+                    <text x="58" y="22" fill="#0f0" font-size="11" font-family="Courier New">120</text>
+                    <!-- 160 -->
+                    <line x1="120" y1="20" x2="118" y2="34" stroke="#4a0" stroke-width="2"/>
+                    <text x="112" y="18" fill="#ff0" font-size="11" font-family="Courier New">160</text>
+                    <!-- 200 -->
+                    <line x1="158" y1="42" x2="150" y2="52" stroke="#a40" stroke-width="2"/>
+                    <text x="152" y="38" fill="#f80" font-size="11" font-family="Courier New">200</text>
+                    <!-- 240 -->
+                    <line x1="176" y1="80" x2="164" y2="84" stroke="#a00" stroke-width="2"/>
+                    <text x="166" y="78" fill="#f44" font-size="11" font-family="Courier New">240</text>
+                    <!-- 280 -->
+                    <line x1="178" y1="120" x2="166" y2="118" stroke="#a00" stroke-width="2"/>
+                    <text x="166" y="134" fill="#f22" font-size="11" font-family="Courier New">280</text>
+                    <!-- 320 -->
+                    <line x1="162" y1="158" x2="152" y2="150" stroke="#f00" stroke-width="2"/>
+                    <text x="152" y="172" fill="#f00" font-size="11" font-family="Courier New">320</text>
+                </g>
+                <!-- Küçük bölme çizgileri -->
+                <g stroke="#1a3a1a" stroke-width="1">
+                    <line x1="26" y1="138" x2="36" y2="132"/>
+                    <line x1="20" y1="85" x2="32" y2="88"/>
+                    <line x1="46" y1="38" x2="55" y2="48"/>
+                    <line x1="95" y1="18" x2="95" y2="32"/>
+                    <line x1="140" y1="28" x2="135" y2="42"/>
+                    <line x1="170" y1="60" x2="158" y2="66"/>
+                    <line x1="180" y1="100" x2="168" y2="100"/>
+                    <line x1="172" y1="140" x2="162" y2="135"/>
+                </g>
+                <!-- Kırmızı bölge arkı -->
+                <path d="M 155,48 A 80,80 0 0 1 172,148" fill="none" stroke="rgba(255,0,0,0.15)" stroke-width="8"/>
+            </svg>
+            <div class="speedo-needle" id="speedo-needle"></div>
+            <div class="speedo-value" id="speedo-value">0</div>
+            <div class="speedo-unit">KM/H</div>
+            <div class="speedo-label">FOREST RACER</div>
+        </div>
+    </div>
+
+    <div id="rpm-label">RPM</div>
+    <div id="rpm-bar"><div id="rpm-fill"></div></div>
+    <div id="gear-label">VİTES</div>
+    <div id="gear" >1</div>
 </div>
 
-
-
-<!-- REKLAMLAR -->
-<!-- SOL SABİT REKLAM -->
-<div class="right-ad">
-  <iframe src="https://www.effectivegatecpm.com/dvwibkt2?key=397cb277460893670ee88c5b3ece364e" 
-          width="160" height="600" 
-          style="border:none;overflow:hidden;">
-  </iframe>
-</div>
-  <!-- addsterra banner -->
-
-<!-- SAĞ SABİT REKLAM -->
-<div class="left-ad">
-  <iframe src="https://www.effectivegatecpm.com/dvwibkt2?key=397cb277460893670ee88c5b3ece364e" 
-          width="160" height="600" 
-          style="border:none;overflow:hidden;">
-  </iframe>
-</div>
-<style>
-.right-Ad{
-  position:fixed;
-  right:10px;
-  top:150px;
-  width:160px;
-  box-shadow:0 0 20px #000000;
-  padding: 5px;
-  border-radius: 10px;
-}
-.left-Ad {
-  position:fixed;
-  left:10px;
-  top:150px;
-  width:160px;
-  box-shadow:0 0 20px #000000;
-  padding: 5px;
-  border-radius: 10px;
-}
-</style>
-
-<!-- NAVBAR -->
-<nav>
-  <div class="logo">7BEATS</div>
-  <ul>
-    </style></li>
-    <li><a href="#">MAİN</a></li>
-    <li><a href="#downloads">SONGS</a></li>
-    <li><a href="#footer">CONTACT</a></li>
-  </ul>
-</nav>
-
-<!-- HERO -->
-<section class="hero">
-  <h1>7BEATS</h1>
-  <p>WELCOME TO MY SİTE</p>
-  <a href="#downloads">
-    <button class="scrollBtn">GO TO SONGS</button>
-  </a>
-  <style>
-
-  </style>
-</section>
-
-<!-- DOWNLOAD -->
-<section id="SONGS" class="download-section">
-<h2 class="section-title"></h2>
-<style>
-  h2{
-    font-family: fantasy;
-    background-color: #1e293b;
-    position: relative;
-    border-radius: 15px;
-    width: 1460px;
-    text-align: left;
-  }
-  
-</style>
-<div class="grid">
-
-<!--CARDLAR-->
-<style>
-  p{
-    font-family: Arial, Helvetica, sans-serif;
-  }
-</style>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/748mdHapucXQri7IAO8yFK?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>doja cat</h3>
-<p>kiss me more</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
+<div id="overlay">
+    <h1>🌲 Orman Yarışçısı 🌲</h1>
+    <h2>Virajlı dağ yollarında ağaçların arasında<br>engelleri aşarak hayatta kal!</h2>
+    <div class="final-score" id="finalScore" style="display:none;"></div>
+    <button id="startBtn">BAŞLA</button>
+    <div class="controls-info">
+        ⬅️ A / Sol Ok = Sola &nbsp;|&nbsp; ➡️ D / Sağ Ok = Sağa<br>
+        ⬆️ W / Yukarı = Hızlan &nbsp;|&nbsp; ⬇️ S / Aşağı = Yavaşla<br>
+        📱 Dokunmatik Destekli
+    </div>
 </div>
 
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" 
-src="https://open.spotify.com/embed/track/0k5hoseEJnCAbpRh38dNoI?utm_source=generator" 
-width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>meghan trainor</h3>
-<p>title</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a> 
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/4UKJUbcuStnnxLeJmVJsSc?utm_source=generator" width="100%" height="352" frameBorder="0" 
-allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>dj snake</h3>
-<p>lean on</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/6FfLg6FFqhCsrFOaHIGkg0?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>JAWNY</h3>
-<p>Honeypie-</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/2HoqbEOXgbDSLZ5XCePEXt?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe><h3>Ray charles</h3>
-<p>Hit the road jack-</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" 
-src="https://open.spotify.com/embed/track/65iyI1iybyv5ecsfBHSdUf?utm_source=generator" 
-width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-loading="lazy"></iframe> 
-<h3>Westside...</h3><p>gangasta natinon-</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/5KBARWIxeMGkvUax9VtVC9?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Saweetie</h3><p>My type-</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/7eJMfftS33KTjuF7lTsMCx?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Death bed</h3><p>Powfu-</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/228BxWXUYQPJrJYHDLOHkj?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Dady yankee</h3><p>gassolina</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/7uoFMmxln0GPXQ0AcCBXRq?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>SNOWMAN</h3><p>Sia</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/53FhswemY3bkUOAZRi7Lpo?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe><h3>Honey see you</h3><p>ISTERIF-</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/4UDmDIqJIbrW0hMBQMFOsM?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>stayin' Alive</h3><p>Bee Gees</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/4u8IPU322yG7mNrqv89GGL?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Hey sexy lady</h3><p>shaggy</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/71R6zJsrF3ffc3TBFHfivX?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Bumpy ride</h3><p>mohombi</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/6AQbmUe0Qwf5PZnt4HmTXv?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Boy's a liar pt2</h3><p>ice spice-</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/5D2mYZuzcgjpchVY1pmTPh?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Candy shop</h3><p>50 cent</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/0l0CvurVUrr2w3Jj1hOVFc?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>NO</h3><p>Meghan trainor</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/5jE48hhRu8E6zBDPRSkEq7?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe><h3>All About Thet Bass</h3><p>Meghan trainor</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-  <div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/1TtteYFQeZfSU8AmfIAOvu?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>sun is up</h3><p>Inna</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-  <div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/7F1lHcpnTycnimQrCxDFI5?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>HOT</h3><p>Inna</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-  <div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/32yIEFS62uS5ryhr2Xlooj?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen=""
-  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Hotel room service</h3><p>pitbull</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-    <div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/3ypMsqUwfNFMiooMLVHfkp?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>YMCA</h3><p>Village people</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-  
-     <div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/5lWSa1rmuSL6OBPOnkAqoa?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Rasputin</h3><p>boney M.</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-   
-<div class="card">
-<iframe data-testid="embed-iframe" style="border-radius:12px" src="https://open.spotify.com/embed/track/7yq4Qj7cqayVTp3FF9CWbm?utm_source=generator" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
-<h3>Riptide</h3><p>Vance joy</p>
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"><button class="downloadBtn">7BEATS</button></a>
-</div>
-
-</section>
-
-<footer id="footer">
-<a href="https://www.tiktok.com/@7_beatt1?is_from_webapp=1&sender_device=pc"> <img src="sdrh.jfif" alt=""></a>
-<p>7BEATS FOLLOW FOR MORE</p> 
-<style>
- 
-  img{
-    width: 100px;
-    border-radius: 125px;
-  }
-</style>
-
-</footer>
-
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-function SPOTİFY (id){
-alert("coming soon: "+id);
+// ===================== OYUN AYARLARI =====================
+const LANES = [-3, -1, 1, 3];
+const ROAD_WIDTH = 10;
+const INITIAL_SPEED = 0.35;
+const MAX_SPEED = 2.5;
+const SPEED_INCREMENT = 0.0003;
+const TREE_DENSITY = 200;
+const SEGMENT_LENGTH = 5;
+const TOTAL_SEGMENTS = 600;
+const DRAW_DISTANCE = 250;
+
+// ===================== VIRAJ SİSTEMİ =====================
+let roadSegments = [];
+let roadCurve = []; // Her segment için viraj açısı
+
+function generateRoadCurve() {
+    roadCurve = [];
+    let currentCurve = 0;
+    let curveTarget = 0;
+    let curveTimer = 0;
+
+    for (let i = 0; i < TOTAL_SEGMENTS * 2; i++) {
+        curveTimer--;
+        if (curveTimer <= 0) {
+            // Yeni viraj hedefi
+            const difficulty = Math.min(1, i / 500);
+            curveTarget = (Math.random() - 0.5) * 0.035 * (1 + difficulty);
+            // Bazen düz yol
+            if (Math.random() > 0.6) curveTarget = 0;
+            curveTimer = 30 + Math.floor(Math.random() * 80);
+        }
+        currentCurve += (curveTarget - currentCurve) * 0.02;
+        roadCurve.push(currentCurve);
+    }
 }
+
+function getRoadOffset(segIndex) {
+    let offset = 0;
+    let angle = 0;
+    for (let i = 0; i < segIndex && i < roadCurve.length; i++) {
+        angle += roadCurve[i];
+        offset += Math.sin(angle) * SEGMENT_LENGTH;
+    }
+    return { x: offset, angle: angle };
+}
+
+// ===================== THREE.JS =====================
+let scene, camera, renderer, clock;
+let car, carModel;
+let roadMeshes = [];
+let obstacles = [], coins = [], particles = [];
+let treesAll = [];
+let fireflies = [];
+let mountains = [];
+let speed = INITIAL_SPEED;
+let score = 0;
+let lives = 3;
+let gameRunning = false;
+let currentLane = 1;
+let targetX = LANES[1];
+let carX = LANES[1];
+let carWorldX = 0;
+let carWorldZ = 0;
+let boosting = false;
+let braking = false;
+let invincible = false;
+let distanceSinceObstacle = 0;
+let distanceSinceCoin = 0;
+let nextObstacleDistance = 60;
+let shakeAmount = 0;
+let comboCount = 0;
+let comboTimer = 0;
+let totalDistance = 0;
+let currentSegment = 0;
+let carTilt = 0;
+let carSway = 0;
+let carBounce = 0;
+let steeringAngle = 0;
+let wheelAngle = 0;
+let currentRoadAngle = 0;
+let displaySpeed = 0;
+let engineRPM = 0;
+let currentGear = 1;
+
+const keys = {};
+
+function init() {
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x001208, 0.006);
+    scene.background = new THREE.Color(0x000a04);
+
+    camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.1, 800);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    document.body.insertBefore(renderer.domElement, document.getElementById('ui'));
+
+    clock = new THREE.Clock();
+
+    // Işıklar
+    scene.add(new THREE.AmbientLight(0x112211, 0.4));
+    const moonLight = new THREE.DirectionalLight(0x6688bb, 0.4);
+    moonLight.position.set(-30, 50, -40);
+    moonLight.castShadow = true;
+    scene.add(moonLight);
+
+    // Ay
+    const moonGeo = new THREE.SphereGeometry(4, 16, 16);
+    const moonMat = new THREE.MeshBasicMaterial({ color: 0xddeeff });
+    const moon = new THREE.Mesh(moonGeo, moonMat);
+    moon.position.set(-60, 80, -300);
+    scene.add(moon);
+    scene.add(new THREE.PointLight(0x6688bb, 0.3, 500));
+
+    generateRoadCurve();
+    createRoadSegments();
+    createCar();
+    createMountains();
+    createForest();
+    createStarfield();
+    createFireflies();
+
+    // Kontroller
+    window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+    window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+    window.addEventListener('resize', onResize);
+    document.getElementById('startBtn').addEventListener('click', startGame);
+
+    let touchStartX = 0;
+    renderer.domElement.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+    renderer.domElement.addEventListener('touchmove', e => {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - touchStartX;
+        if (dx > 30) { moveRight(); touchStartX = e.touches[0].clientX; }
+        if (dx < -30) { moveLeft(); touchStartX = e.touches[0].clientX; }
+    });
+
+    animate();
+}
+
+// ===================== YOL =====================
+function createRoadSegments() {
+    const roadGroup = new THREE.Group();
+    scene.add(roadGroup);
+
+    for (let i = 0; i < TOTAL_SEGMENTS; i++) {
+        const seg = createRoadPiece(i);
+        roadGroup.add(seg.mesh);
+        roadSegments.push(seg);
+    }
+    updateRoadPositions();
+}
+
+function createRoadPiece(index) {
+    const group = new THREE.Group();
+
+    // Yol yüzeyi
+    const roadGeo = new THREE.PlaneGeometry(ROAD_WIDTH, SEGMENT_LENGTH + 0.5);
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.85 });
+    const roadMesh = new THREE.Mesh(roadGeo, roadMat);
+    roadMesh.rotation.x = -Math.PI / 2;
+    roadMesh.receiveShadow = true;
+    group.add(roadMesh);
+
+    // Yol kenarları
+    const edgeMat = new THREE.MeshBasicMaterial({ color: 0x00ff44 });
+    for (let side of [-1, 1]) {
+        const edgeGeo = new THREE.BoxGeometry(0.12, 0.08, SEGMENT_LENGTH + 0.5);
+        const edge = new THREE.Mesh(edgeGeo, edgeMat);
+        edge.position.set(side * ROAD_WIDTH / 2, 0.04, 0);
+        group.add(edge);
+    }
+
+    // Orta çizgi
+    if (index % 3 !== 0) {
+        const lineGeo = new THREE.BoxGeometry(0.08, 0.04, SEGMENT_LENGTH * 0.5);
+        const lineMat = new THREE.MeshBasicMaterial({ color: 0x334433 });
+        const line = new THREE.Mesh(lineGeo, lineMat);
+        line.position.set(0, 0.04, 0);
+        group.add(line);
+    }
+
+    // Kenar refektörleri
+    if (index % 5 === 0) {
+        for (let side of [-1, 1]) {
+            const refGeo = new THREE.BoxGeometry(0.15, 0.4, 0.15);
+            const refMat = new THREE.MeshBasicMaterial({
+                color: side === -1 ? 0xff4400 : 0x00ff44
+            });
+            const ref = new THREE.Mesh(refGeo, refMat);
+            ref.position.set(side * (ROAD_WIDTH / 2 + 0.3), 0.2, 0);
+            group.add(ref);
+        }
+    }
+
+    return { mesh: group, index: index };
+}
+
+function updateRoadPositions() {
+    let x = 0, z = 0, angle = 0;
+
+    for (let i = 0; i < roadSegments.length; i++) {
+        const seg = roadSegments[i];
+        const curveVal = roadCurve[i] || 0;
+        angle += curveVal;
+
+        seg.mesh.position.set(x, 0, -z);
+        seg.mesh.rotation.y = -angle;
+        seg.worldX = x;
+        seg.worldZ = -z;
+        seg.angle = angle;
+
+        x += Math.sin(angle) * SEGMENT_LENGTH;
+        z += Math.cos(angle) * SEGMENT_LENGTH;
+    }
+}
+
+// ===================== ARABA =====================
+function createCar() {
+    car = new THREE.Group();
+    carModel = new THREE.Group();
+
+    // Gövde
+    const bodyGeo = new THREE.BoxGeometry(1.6, 0.55, 3.2);
+    const bodyMat = new THREE.MeshStandardMaterial({
+        color: 0x00cc44, metalness: 0.8, roughness: 0.2,
+        emissive: 0x003311, emissiveIntensity: 0.3
+    });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 0.5;
+    body.castShadow = true;
+    carModel.add(body);
+
+    // Tavan
+    const topGeo = new THREE.BoxGeometry(1.3, 0.45, 1.6);
+    const topMat = new THREE.MeshStandardMaterial({ color: 0x009933, metalness: 0.9, roughness: 0.1 });
+    const top = new THREE.Mesh(topGeo, topMat);
+    top.position.set(0, 1.0, -0.1);
+    carModel.add(top);
+
+    // Ön cam
+    const windGeo = new THREE.BoxGeometry(1.2, 0.4, 0.08);
+    const windMat = new THREE.MeshStandardMaterial({
+        color: 0x88ffcc, transparent: true, opacity: 0.4, metalness: 0.9
+    });
+    const wind = new THREE.Mesh(windGeo, windMat);
+    wind.position.set(0, 0.95, 0.7);
+    carModel.add(wind);
+
+    // Farlar
+    for (let side of [-0.55, 0.55]) {
+        const hlGeo = new THREE.BoxGeometry(0.28, 0.14, 0.08);
+        const hlMat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
+        const hl = new THREE.Mesh(hlGeo, hlMat);
+        hl.position.set(side, 0.5, -1.65);
+        carModel.add(hl);
+
+        const spot = new THREE.SpotLight(0xffffaa, 0.6, 50, Math.PI / 6, 0.5);
+        spot.position.set(side, 0.5, -1.65);
+        spot.target.position.set(side * 0.3, 0, -25);
+        carModel.add(spot);
+        carModel.add(spot.target);
+
+        const coneGeo = new THREE.ConeGeometry(2.5, 25, 8, 1, true);
+        const coneMat = new THREE.MeshBasicMaterial({
+            color: 0xffffaa, transparent: true, opacity: 0.015, side: THREE.DoubleSide
+        });
+        const cone = new THREE.Mesh(coneGeo, coneMat);
+        cone.rotation.x = Math.PI / 2;
+        cone.position.set(side, 0.4, -14);
+        carModel.add(cone);
+    }
+
+    // Stop lambaları
+    for (let side of [-0.6, 0.6]) {
+        const tlGeo = new THREE.BoxGeometry(0.22, 0.12, 0.08);
+        const tlMat = new THREE.MeshBasicMaterial({ color: 0xff2200 });
+        const tl = new THREE.Mesh(tlGeo, tlMat);
+        tl.position.set(side, 0.5, 1.65);
+        carModel.add(tl);
+    }
+
+    // Fren lambaları (fren sırasında parlar)
+    const brakeLightGeo = new THREE.BoxGeometry(1.2, 0.08, 0.06);
+    const brakeLightMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0 });
+    const brakeLight = new THREE.Mesh(brakeLightGeo, brakeLightMat);
+    brakeLight.position.set(0, 0.65, 1.68);
+    brakeLight.name = 'brakeLight';
+    carModel.add(brakeLight);
+
+    // Tekerlekler
+    const wheelGeo = new THREE.CylinderGeometry(0.28, 0.28, 0.18, 12);
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    [[-0.85, 0.28, -0.9], [0.85, 0.28, -0.9], [-0.85, 0.28, 0.9], [0.85, 0.28, 0.9]].forEach((pos, idx) => {
+        const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel.rotation.z = Math.PI / 2;
+        wheel.position.set(...pos);
+        wheel.name = 'wheel_' + idx;
+        carModel.add(wheel);
+    });
+
+    // Alt neon
+    const underGlow = new THREE.PointLight(0x00ff44, 0.5, 8);
+    underGlow.position.set(0, 0.1, 0);
+    carModel.add(underGlow);
+
+    car.add(carModel);
+    car.position.set(0, 0, 0);
+    scene.add(car);
+}
+
+// ===================== DAĞLAR =====================
+function createMountains() {
+    const mountainColors = [0x0a1a08, 0x081508, 0x0c1a0a, 0x061006];
+
+    for (let i = 0; i < 30; i++) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const h = 20 + Math.random() * 60;
+        const w = 30 + Math.random() * 50;
+
+        const geo = new THREE.ConeGeometry(w, h, 5 + Math.floor(Math.random() * 4));
+        const mat = new THREE.MeshStandardMaterial({
+            color: mountainColors[Math.floor(Math.random() * mountainColors.length)],
+            roughness: 1, flatShading: true
+        });
+        const mountain = new THREE.Mesh(geo, mat);
+        mountain.position.set(
+            side * (50 + Math.random() * 120),
+            h / 2 - 5,
+            -(Math.random() * 500 + 50)
+        );
+        mountain.rotation.y = Math.random() * Math.PI;
+        scene.add(mountain);
+        mountains.push(mountain);
+
+        // Kar tepesi (yüksek dağlar)
+        if (h > 40) {
+            const snowGeo = new THREE.ConeGeometry(w * 0.3, h * 0.15, 5);
+            const snowMat = new THREE.MeshBasicMaterial({ color: 0x445544, transparent: true, opacity: 0.3 });
+            const snow = new THREE.Mesh(snowGeo, snowMat);
+            snow.position.set(mountain.position.x, mountain.position.y + h * 0.42, mountain.position.z);
+            scene.add(snow);
+            mountains.push(snow);
+        }
+    }
+
+    // Uzak sis dağları
+    for (let i = 0; i < 15; i++) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const h = 40 + Math.random() * 80;
+        const w = 60 + Math.random() * 80;
+        const geo = new THREE.ConeGeometry(w, h, 4);
+        const mat = new THREE.MeshBasicMaterial({
+            color: 0x051005, transparent: true, opacity: 0.5
+        });
+        const m = new THREE.Mesh(geo, mat);
+        m.position.set(side * (100 + Math.random() * 200), h / 2 - 10, -(200 + Math.random() * 300));
+        scene.add(m);
+        mountains.push(m);
+    }
+}
+
+// ===================== ORMAN =====================
+function createForest() {
+    for (let i = 0; i < TREE_DENSITY; i++) {
+        for (let side of [-1, 1]) {
+            const tree = createTree();
+            const segIdx = Math.floor(Math.random() * TOTAL_SEGMENTS * 0.8);
+            const seg = roadSegments[segIdx];
+            if (!seg) continue;
+
+            const offset = side * (ROAD_WIDTH / 2 + 1.5 + Math.random() * 25);
+            const perpX = Math.cos(seg.angle) * offset;
+            const perpZ = -Math.sin(seg.angle) * offset;
+
+            tree.position.set(
+                seg.worldX + perpX,
+                0,
+                seg.worldZ + perpZ
+            );
+            tree.rotation.y = Math.random() * Math.PI * 2;
+            scene.add(tree);
+            treesAll.push(tree);
+        }
+    }
+
+    // Mantarlar
+    for (let i = 0; i < 50; i++) {
+        const mushroom = createMushroom();
+        const segIdx = Math.floor(Math.random() * TOTAL_SEGMENTS * 0.6);
+        const seg = roadSegments[segIdx];
+        if (!seg) continue;
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const offset = side * (ROAD_WIDTH / 2 + 0.8 + Math.random() * 4);
+        mushroom.position.set(
+            seg.worldX + Math.cos(seg.angle) * offset,
+            0,
+            seg.worldZ - Math.sin(seg.angle) * offset
+        );
+        scene.add(mushroom);
+        treesAll.push(mushroom);
+    }
+}
+
+function createTree() {
+    const group = new THREE.Group();
+    const h = 4 + Math.random() * 10;
+    const r = 0.12 + Math.random() * 0.15;
+
+    const trunkGeo = new THREE.CylinderGeometry(r * 0.6, r, h, 6);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x2a1a0a, roughness: 0.95 });
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.y = h / 2;
+    trunk.castShadow = true;
+    group.add(trunk);
+
+    const leafColors = [0x0a4a0a, 0x0d5a0d, 0x085008, 0x0a3a0a];
+    const layers = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < layers; i++) {
+        const leafH = 2 + Math.random() * 2.5;
+        const leafR = 1.2 + Math.random() * 1.5 - i * 0.3;
+        const leafGeo = new THREE.ConeGeometry(leafR, leafH, 7);
+        const leafMat = new THREE.MeshStandardMaterial({
+            color: leafColors[Math.floor(Math.random() * leafColors.length)], roughness: 0.9
+        });
+        const leaf = new THREE.Mesh(leafGeo, leafMat);
+        leaf.position.y = h * 0.5 + i * 1.5 + 1;
+        leaf.castShadow = true;
+        group.add(leaf);
+    }
+
+    if (Math.random() > 0.75) {
+        const gc = [0x00ff44, 0x44ff88, 0x00ffaa][Math.floor(Math.random() * 3)];
+        const glow = new THREE.PointLight(gc, 0.2, 6);
+        glow.position.y = h * 0.7;
+        group.add(glow);
+    }
+
+    return group;
+}
+
+function createMushroom() {
+    const group = new THREE.Group();
+    const colors = [0xff4444, 0xff8844, 0xff44ff, 0x44aaff, 0xffff44];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+
+    const stemGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.3, 6);
+    const stemMat = new THREE.MeshStandardMaterial({ color: 0xddccaa });
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    stem.position.y = 0.15;
+    group.add(stem);
+
+    const capGeo = new THREE.SphereGeometry(0.2, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+    const capMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.8 });
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.y = 0.3;
+    group.add(cap);
+
+    group.add(new THREE.PointLight(color, 0.12, 3));
+    return group;
+}
+
+function createStarfield() {
+    const geo = new THREE.BufferGeometry();
+    const pos = [];
+    for (let i = 0; i < 4000; i++) {
+        pos.push((Math.random() - 0.5) * 500, Math.random() * 100 + 20, (Math.random() - 0.5) * 800 - 200);
+    }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, transparent: true, opacity: 0.7 })));
+}
+
+function createFireflies() {
+    for (let i = 0; i < 50; i++) {
+        const c = [0x88ff44, 0x44ff88, 0xaaff00][Math.floor(Math.random() * 3)];
+        const geo = new THREE.SphereGeometry(0.05, 6, 6);
+        const mat = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.8 });
+        const ff = new THREE.Mesh(geo, mat);
+        ff.position.set(
+            (Math.random() - 0.5) * 40, 1 + Math.random() * 5, -Math.random() * 100
+        );
+        ff.userData = {
+            baseY: ff.position.y, baseX: ff.position.x,
+            sy: 0.5 + Math.random() * 1.5, sx: 0.3 + Math.random() * 0.8,
+            phase: Math.random() * Math.PI * 2
+        };
+        const light = new THREE.PointLight(c, 0.12, 4);
+        light.position.copy(ff.position);
+        scene.add(light);
+        ff.userData.light = light;
+        scene.add(ff);
+        fireflies.push(ff);
+    }
+}
+
+// ===================== ENGELLERs =====================
+function spawnObstacle() {
+    const seg = roadSegments[Math.min(currentSegment + 30 + Math.floor(Math.random() * 20), TOTAL_SEGMENTS - 1)];
+    if (!seg) return;
+
+    const lane = LANES[Math.floor(Math.random() * LANES.length)];
+    const types = ['log', 'rock', 'deer', 'fallen_tree'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    let obstacle;
+
+    if (type === 'log') {
+        obstacle = new THREE.Group();
+        const logGeo = new THREE.CylinderGeometry(0.35, 0.4, 2.5, 8);
+        const logMat = new THREE.MeshStandardMaterial({ color: 0x4a2a0a, roughness: 0.95 });
+        const log = new THREE.Mesh(logGeo, logMat);
+        log.rotation.z = Math.PI / 2;
+        log.position.y = 0.4;
+        obstacle.add(log);
+    } else if (type === 'rock') {
+        obstacle = new THREE.Group();
+        const rockGeo = new THREE.DodecahedronGeometry(0.8, 1);
+        const rockMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.95, flatShading: true });
+        const rock = new THREE.Mesh(rockGeo, rockMat);
+        rock.position.y = 0.5;
+        rock.scale.set(1 + Math.random() * 0.5, 0.7, 1 + Math.random() * 0.3);
+        obstacle.add(rock);
+    } else if (type === 'deer') {
+        obstacle = new THREE.Group();
+        const deerMat = new THREE.MeshStandardMaterial({ color: 0x8B6914 });
+        const b = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 1.8), deerMat);
+        b.position.y = 1.2; obstacle.add(b);
+        const h = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 0.6), deerMat);
+        h.position.set(0, 1.7, -1); obstacle.add(h);
+        [[-0.25,0.4,-0.6],[0.25,0.4,-0.6],[-0.25,0.4,0.6],[0.25,0.4,0.6]].forEach(p => {
+            const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15,0.8,0.15), deerMat);
+            leg.position.set(...p); obstacle.add(leg);
+        });
+        for (let s of [-0.12, 0.12]) {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.05,6,6), new THREE.MeshBasicMaterial({color:0xffff44}));
+            eye.position.set(s, 1.8, -1.3); obstacle.add(eye);
+        }
+    } else {
+        obstacle = new THREE.Group();
+        const tGeo = new THREE.CylinderGeometry(0.25, 0.35, 4, 8);
+        const tMat = new THREE.MeshStandardMaterial({ color: 0x3a2208 });
+        const t = new THREE.Mesh(tGeo, tMat);
+        t.rotation.z = Math.PI / 2; t.position.y = 0.35;
+        obstacle.add(t);
+        const lc = new THREE.Mesh(new THREE.SphereGeometry(0.5,6,6), new THREE.MeshStandardMaterial({color:0x1a4a0a}));
+        lc.position.set(-1.8, 0.5, 0); lc.scale.set(1.5,0.8,1.2);
+        obstacle.add(lc);
+    }
+
+    // Segmente göre pozisyon
+    const perpX = Math.cos(seg.angle) * lane;
+    const perpZ = -Math.sin(seg.angle) * lane;
+    obstacle.position.set(seg.worldX + perpX, 0, seg.worldZ + perpZ);
+    obstacle.rotation.y = -seg.angle;
+    obstacle.userData = { type: 'obstacle', segIndex: seg.index };
+    scene.add(obstacle);
+    obstacles.push(obstacle);
+}
+
+function spawnCoin() {
+    const seg = roadSegments[Math.min(currentSegment + 25, TOTAL_SEGMENTS - 1)];
+    if (!seg) return;
+
+    const lane = LANES[Math.floor(Math.random() * LANES.length)];
+    const group = new THREE.Group();
+    const coinGeo = new THREE.TorusGeometry(0.35, 0.1, 8, 16);
+    group.add(new THREE.Mesh(coinGeo, new THREE.MeshBasicMaterial({ color: 0x44ff88 })));
+    group.add(new THREE.PointLight(0x44ff88, 0.4, 6));
+
+    const px = Math.cos(seg.angle) * lane;
+    const pz = -Math.sin(seg.angle) * lane;
+    group.position.set(seg.worldX + px, 1.2, seg.worldZ + pz);
+    group.userData = { type: 'coin', rotSpeed: 0.04, segIndex: seg.index };
+    scene.add(group);
+    coins.push(group);
+}
+
+// ===================== EFEKTLER =====================
+function createExplosion(pos, color) {
+    for (let i = 0; i < 25; i++) {
+        const s = 0.08 + Math.random() * 0.12;
+        const geo = new THREE.BoxGeometry(s, s, s);
+        const mat = new THREE.MeshBasicMaterial({ color: color || 0x44ff00, transparent: true, opacity: 1 });
+        const p = new THREE.Mesh(geo, mat);
+        p.position.copy(pos);
+        p.userData = {
+            vel: new THREE.Vector3((Math.random()-0.5)*0.4, Math.random()*0.4+0.1, (Math.random()-0.5)*0.4),
+            life: 1.0, decay: 0.015 + Math.random() * 0.01
+        };
+        scene.add(p);
+        particles.push(p);
+    }
+}
+
+function showNotification(text) {
+    const el = document.getElementById('notification');
+    el.textContent = text;
+    el.style.opacity = '1';
+    setTimeout(() => el.style.opacity = '0', 1000);
+}
+
+// ===================== HIZ GÖSTERGESİ =====================
+function updateSpeedometer(kmh) {
+    displaySpeed += (kmh - displaySpeed) * 0.08;
+    const clamped = Math.min(320, Math.max(0, displaySpeed));
+
+    // İbre açısı: 0 km/h = -135°, 320 km/h = 135°
+    const angle = -135 + (clamped / 320) * 270;
+    document.getElementById('speedo-needle').style.transform =
+        `translateX(-50%) rotate(${angle}deg)`;
+    document.getElementById('speedo-value').textContent = Math.floor(clamped);
+
+    // Vites hesapla
+    if (clamped < 40) currentGear = 1;
+    else if (clamped < 80) currentGear = 2;
+    else if (clamped < 130) currentGear = 3;
+    else if (clamped < 190) currentGear = 4;
+    else if (clamped < 260) currentGear = 5;
+    else currentGear = 6;
+
+    document.getElementById('gear').textContent = currentGear;
+
+    // RPM hesapla
+    const gearRanges = [
+        [0, 40], [40, 80], [80, 130], [130, 190], [190, 260], [260, 320]
+    ];
+    const range = gearRanges[currentGear - 1];
+    const rpmPercent = ((clamped - range[0]) / (range[1] - range[0])) * 100;
+    engineRPM = Math.max(15, Math.min(100, rpmPercent));
+    document.getElementById('rpm-fill').style.width = engineRPM + '%';
+
+    // RPM bar renk efekti
+    if (engineRPM > 80) {
+        document.getElementById('rpm-fill').style.boxShadow = '0 0 12px #ff2200';
+    } else {
+        document.getElementById('rpm-fill').style.boxShadow = '0 0 8px #00ff44';
+    }
+}
+
+// ===================== KONTROLLER =====================
+function moveLeft() {
+    if (currentLane > 0) { currentLane--; targetX = LANES[currentLane]; }
+}
+function moveRight() {
+    if (currentLane < LANES.length - 1) { currentLane++; targetX = LANES[currentLane]; }
+}
+
+function startGame() {
+    score = 0; lives = 3; speed = INITIAL_SPEED;
+    currentLane = 1; targetX = LANES[1]; carX = LANES[1];
+    gameRunning = true; invincible = false; comboCount = 0;
+    totalDistance = 0; currentSegment = 0;
+    carTilt = 0; carSway = 0; steeringAngle = 0;
+    displaySpeed = 0;
+
+    obstacles.forEach(o => scene.remove(o));
+    coins.forEach(c => scene.remove(c));
+    particles.forEach(p => scene.remove(p));
+    obstacles = []; coins = []; particles = [];
+
+    // Yeni viraj yolu oluştur
+    generateRoadCurve();
+    updateRoadPositions();
+
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('lives').textContent = '❤️❤️❤️';
+    updateUI();
+}
+
+function gameOver() {
+    gameRunning = false;
+    document.getElementById('overlay').style.display = 'flex';
+    document.getElementById('overlay').querySelector('h1').textContent = '💥 Oyun Bitti!';
+    document.getElementById('overlay').querySelector('h2').innerHTML =
+        `Mesafe: ${Math.floor(totalDistance)} m<br>Maks Hız: ${Math.floor(speed * 130)} km/h`;
+    document.getElementById('finalScore').textContent = `Final Skor: ${score}`;
+    document.getElementById('finalScore').style.display = 'block';
+    document.getElementById('startBtn').textContent = 'TEKRAR OYNA';
+}
+
+function updateUI() {
+    document.getElementById('score').textContent = `Skor: ${score}`;
+    document.getElementById('distance').textContent = `Mesafe: ${Math.floor(totalDistance)} m`;
+    document.getElementById('lives').textContent = '❤️'.repeat(lives) + '🖤'.repeat(Math.max(0, 3 - lives));
+}
+
+function checkCollision(obj) {
+    const carBox = new THREE.Box3();
+    // Araba kutusunu dünya pozisyonunda hesapla
+    const carWorldPos = new THREE.Vector3();
+    car.getWorldPosition(carWorldPos);
+    carBox.setFromCenterAndSize(carWorldPos, new THREE.Vector3(1.2, 1, 2.5));
+
+    const objBox = new THREE.Box3().setFromObject(obj);
+    return carBox.intersectsBox(objBox);
+}
+
+// ===================== ANA DÖNGÜ =====================
+function animate() {
+    requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+    const time = clock.getElapsedTime();
+
+    if (gameRunning) {
+        // Giriş
+        if ((keys['a'] || keys['arrowleft']) && !keys._lp) { keys._lp = true; moveLeft(); }
+        if (!(keys['a'] || keys['arrowleft'])) keys._lp = false;
+        if ((keys['d'] || keys['arrowright']) && !keys._rp) { keys._rp = true; moveRight(); }
+        if (!(keys['d'] || keys['arrowright'])) keys._rp = false;
+
+        boosting = keys['w'] || keys['arrowup'];
+        braking = keys['s'] || keys['arrowdown'];
+
+        // Hız
+        if (braking) {
+            speed = Math.max(0.15, speed - 0.003);
+        } else {
+            speed = Math.min(speed + SPEED_INCREMENT, MAX_SPEED);
+        }
+        const currentSpeed = boosting ? speed * 1.5 : speed;
+        totalDistance += currentSpeed * 0.5;
+
+        // Segment ilerlemesi
+        currentSegment = Math.floor(totalDistance / SEGMENT_LENGTH);
+        if (currentSegment >= TOTAL_SEGMENTS - 50) {
+            // Yolu uzat - yeni virajlar ekle
+            const oldLen = roadCurve.length;
+            let cc = roadCurve[oldLen - 1] || 0;
+            let ct = 0, timer = 0;
+            for (let i = 0; i < 200; i++) {
+                timer--;
+                if (timer <= 0) {
+                    const diff = Math.min(1, (oldLen + i) / 500);
+                    ct = (Math.random() - 0.5) * 0.035 * (1 + diff);
+                    if (Math.random() > 0.6) ct = 0;
+                    timer = 30 + Math.floor(Math.random() * 80);
+                }
+                cc += (ct - cc) * 0.02;
+                roadCurve.push(cc);
+            }
+        }
+
+        // Mevcut segment verisi
+        const segIdx = Math.min(currentSegment, roadSegments.length - 1);
+        const seg = roadSegments[segIdx];
+        const nextSeg = roadSegments[Math.min(segIdx + 1, roadSegments.length - 1)];
+
+        if (seg) {
+            const curveVal = roadCurve[segIdx] || 0;
+            currentRoadAngle = seg.angle;
+
+            // Şerit geçişi (yumuşak)
+            carX += (targetX - carX) * 0.08;
+
+            // Araba dünya pozisyonu
+            const perpX = Math.cos(seg.angle) * carX;
+            const perpZ = -Math.sin(seg.angle) * carX;
+            carWorldX = seg.worldX + perpX;
+            carWorldZ = seg.worldZ + perpZ;
+
+            car.position.set(carWorldX, 0, carWorldZ);
+            car.rotation.y = -seg.angle;
+
+            // === GERÇEKÇİ DÖNÜŞ HİSSİYATI ===
+
+            // 1. Virajda araba yatma (roll)
+            const targetTilt = -curveVal * 80 * currentSpeed;
+            carTilt += (targetTilt - carTilt) * 0.06;
+            carModel.rotation.z = carTilt;
+
+            // 2. Şerit değiştirirken eğilme
+            const laneDiff = (targetX - carX);
+            steeringAngle += (laneDiff * 0.15 - steeringAngle) * 0.08;
+            carModel.rotation.z += steeringAngle;
+
+            // 3. Virajda burun kıvırma (yaw)
+            const yawTarget = -curveVal * 15 * currentSpeed + laneDiff * 0.02;
+            carSway += (yawTarget - carSway) * 0.05;
+            carModel.rotation.y = carSway;
+
+            // 4. Hızlanma/fren eğimi (pitch)
+            let pitchTarget = 0;
+            if (boosting) pitchTarget = 0.03;
+            if (braking) pitchTarget = -0.05;
+            carModel.rotation.x += (pitchTarget - carModel.rotation.x) * 0.06;
+
+            // 5. Süspansiyon salınımı
+            carBounce = Math.sin(time * 15) * currentSpeed * 0.008 + Math.sin(time * 23) * 0.003;
+            carModel.position.y = carBounce;
+
+            // 6. Fren lambası
+            const bl = carModel.getObjectByName('brakeLight');
+            if (bl) bl.material.opacity = braking ? 0.9 : 0;
+
+            // 7. Tekerlek dönüşü
+            wheelAngle += currentSpeed * 0.5;
+            for (let i = 0; i < 4; i++) {
+                const w = carModel.getObjectByName('wheel_' + i);
+                if (w) {
+                    w.rotation.x = wheelAngle;
+                    // Ön tekerlekler virajda döner
+                    if (i < 2) w.rotation.z = Math.PI / 2 + steeringAngle * 0.3;
+                }
+            }
+
+            // === KAMERA ===
+            const camDist = 10 + (boosting ? 2 : 0);
+            const camHeight = 4.5 + (boosting ? -0.5 : 0) + (braking ? 0.5 : 0);
+            const camBehindX = carWorldX + Math.sin(seg.angle) * camDist;
+            const camBehindZ = carWorldZ + Math.cos(seg.angle) * camDist;
+
+            // Virajda kamera kaydırma (drift hissi)
+            const camLateralOffset = curveVal * 60 * currentSpeed;
+            const camOffsetX = Math.cos(seg.angle) * camLateralOffset;
+            const camOffsetZ = -Math.sin(seg.angle) * camLateralOffset;
+
+            const shX = shakeAmount * (Math.random() - 0.5) * 0.5;
+            const shY = shakeAmount * (Math.random() - 0.5) * 0.3;
+            shakeAmount *= 0.88;
+
+            camera.position.x += (camBehindX + camOffsetX + shX - camera.position.x) * 0.06;
+            camera.position.z += (camBehindZ + camOffsetZ - camera.position.z) * 0.06;
+            camera.position.y += (camHeight + shY - camera.position.y) * 0.08;
+
+            const lookAheadSeg = roadSegments[Math.min(segIdx + 8, roadSegments.length - 1)];
+            if (lookAheadSeg) {
+                const lookTarget = new THREE.Vector3(lookAheadSeg.worldX, 1, lookAheadSeg.worldZ);
+                camera.lookAt(lookTarget);
+            }
+
+            // FOV
+            const targetFov = boosting ? 80 : braking ? 60 : 68;
+            camera.fov += (targetFov - camera.fov) * 0.05;
+            camera.updateProjectionMatrix();
+
+            // Viraj uyarısı
+            const futureCurve = roadCurve[segIdx + 15] || 0;
+            if (Math.abs(futureCurve) > 0.015) {
+                const dir = futureCurve > 0 ? '⟵ VİRAJ' : 'VİRAJ ⟶';
+                document.getElementById('curve-warning').textContent = dir;
+                document.getElementById('curve-warning').style.opacity = '0.6';
+            } else {
+                document.getElementById('curve-warning').style.opacity = '0';
+            }
+        }
+
+        // Skor
+        score += Math.floor(currentSpeed * 2);
+
+        // Engel oluşturma
+        distanceSinceObstacle += currentSpeed;
+        if (distanceSinceObstacle > nextObstacleDistance) {
+            spawnObstacle();
+            if (speed > 0.7 && Math.random() > 0.4) spawnObstacle();
+            distanceSinceObstacle = 0;
+            nextObstacleDistance = 30 + Math.random() * 40 - speed * 6;
+            nextObstacleDistance = Math.max(18, nextObstacleDistance);
+        }
+
+        // Coin
+        distanceSinceCoin += currentSpeed;
+        if (distanceSinceCoin > 22) { spawnCoin(); distanceSinceCoin = 0; }
+
+        // Engel kontrol
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const obs = obstacles[i];
+            const dist = car.position.distanceTo(obs.position);
+            if (dist > 80) {
+                if (obs.userData.segIndex < currentSegment - 5) {
+                    scene.remove(obs); obstacles.splice(i, 1);
+                }
+                continue;
+            }
+            if (!invincible && checkCollision(obs)) {
+                createExplosion(obs.position, 0xff4400);
+                scene.remove(obs); obstacles.splice(i, 1);
+                lives--; shakeAmount = 2;
+                speed = Math.max(INITIAL_SPEED, speed - 0.2);
+                comboCount = 0;
+                invincible = true;
+                setTimeout(() => invincible = false, 1500);
+                if (lives <= 0) gameOver();
+                updateUI();
+            }
+        }
+
+        // Coin kontrol
+        for (let i = coins.length - 1; i >= 0; i--) {
+            const coin = coins[i];
+            coin.rotation.y += coin.userData.rotSpeed;
+            coin.position.y = 1.2 + Math.sin(time * 3 + i) * 0.3;
+
+            if (coin.userData.segIndex < currentSegment - 5) {
+                scene.remove(coin); coins.splice(i, 1); continue;
+            }
+
+            if (checkCollision(coin)) {
+                comboCount++; comboTimer = 3;
+                score += 200 * comboCount;
+                createExplosion(coin.position, 0x44ff88);
+                scene.remove(coin); coins.splice(i, 1);
+                document.getElementById('combo').textContent = `🌟 Kombo x${comboCount}! +${200 * comboCount}`;
+                document.getElementById('combo').style.opacity = '1';
+                if (comboCount === 5) showNotification('🔥 SÜPER!');
+                if (comboCount === 10) showNotification('⚡ EFSANE!');
+                updateUI();
+            }
+        }
+
+        // Invincible blink
+        if (invincible) car.visible = Math.floor(Date.now() / 80) % 2 === 0;
+        else car.visible = true;
+
+        // Kombo timer
+        if (comboTimer > 0) {
+            comboTimer -= delta;
+            if (comboTimer <= 0) {
+                comboCount = 0;
+                document.getElementById('combo').style.opacity = '0';
+            }
+        }
+
+        // Hız göstergesi güncelle
+        const kmh = currentSpeed * 130;
+        updateSpeedometer(kmh);
+        updateUI();
+    }
+
+    // Partiküller
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.position.add(p.userData.vel);
+        p.userData.vel.y -= 0.008;
+        p.userData.life -= p.userData.decay;
+        p.material.opacity = p.userData.life;
+        p.scale.setScalar(Math.max(0.01, p.userData.life));
+        if (p.userData.life <= 0) { scene.remove(p); particles.splice(i, 1); }
+    }
+
+    // Ateş böcekleri kamerayı takip
+    fireflies.forEach((ff, idx) => {
+        ff.position.y = ff.userData.baseY + Math.sin(time * ff.userData.sy + ff.userData.phase) * 0.8;
+        ff.material.opacity = 0.4 + Math.sin(time * 3 + idx) * 0.4;
+        if (ff.userData.light) {
+            ff.userData.light.position.copy(ff.position);
+            ff.userData.light.intensity = 0.08 + Math.sin(time * 3 + idx) * 0.08;
+        }
+        // Kamerayı izle
+        const dist = camera.position.distanceTo(ff.position);
+        if (dist > 60) {
+            ff.position.x = camera.position.x + (Math.random() - 0.5) * 40;
+            ff.position.z = camera.position.z - Math.random() * 50;
+            ff.userData.baseX = ff.position.x;
+            ff.userData.baseY = 1 + Math.random() * 5;
+        }
+    });
+
+    // Dağları kamerayı takip ettir (paralaks)
+    mountains.forEach(m => {
+        if (gameRunning) {
+            m.position.z = camera.position.z - 200 + (m.position.x * 0.2);
+        }
+    });
+
+    // Sis yoğunluğu hızla değişsin
+    scene.fog.density = 0.005 + speed * 0.002;
+
+    renderer.render(scene, camera);
+}
+
+function onResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+init();
 </script>
 </body>
 </html>
-<!-- PARTİCLE ARKA PLAN -->
-<canvas id="particles"></canvas>
-
-<style>
-/* PARTICLE CANVAS */
-#particles{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  z-index:-1;
-}
-
-/* NEON ANİMASYONLU BAŞLIK */
-.hero h1{
-  animation: neonBlink 1.5s infinite alternate;
-}
-
-
-
-
-</style>
-
-<script>
-// -----------------------------
-// PARTICLE ARKA PLAN
-// -----------------------------
-const canvas = document.getElementById("particles");
-const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-let particles = [];
-for(let i=0;i<150;i++){
-  particles.push({
-    x:Math.random()*canvas.width,
-    y:Math.random()*canvas.height,
-    size:Math.random()*2+1,
-    speed:Math.random()*1+0.2
-  });
-}
-function drawParticles(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle="white";
-  for(let p of particles){
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
-    ctx.fill();
-    p.y += p.speed;
-    if(p.y>canvas.height){p.y=0; p.x=Math.random()*canvas.width;}
-  }
-  requestAnimationFrame(drawParticles);
-}
-drawParticles();
-
-// -----------------------------
-// DİNAMİK DOWNLOAD KARTLARI EKLEME
-// -----------------------------
-const grid = document.querySelector(".grid");
-for(let i=5;i<=7;i++){
-  const card = document.createElement("div");
-  card.className="card";
-  card.innerHTML = `<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAATYAAACjCAMAAAA3vsLfAAAAgVBMVEUe12D///8A1VUA1VYA1E4Z114A1FEQ1ltC3HZk4IsK1lnC8tH3/vpz45Re3oQ02mzr+/Dx/PXg+OfU9t6y7sOf67XP9dr1/fiN56e58Mna9+LB8s995ZyO56jI89Sn7LuZ6K5V3oDs+/Ft4pGr7b4n2GZL3XqF5qK078WA5Z4A0kHe4LKRAAAKf0lEQVR4nO2ce5+yLBPHFQSMzSw7n7SD2na9/xf4gIKCWltth30+93z/uK4tTfEnDDPDqOMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwOchjHEJI+TTTfk/gTBMsT/YbHe73SLYZ5Ri9uk2/XUIp04wWbkG/XEy4AiUuwxB7GRJVvF1xBiGayeE+stOzQpGUweE6wCF8WXRChLGP93IvwbD6Q+iSU4edDgT2uvfoJrrRiF0uApCb+lqJRv66db+FZjTPX12M6EwUCUsHN2hmuvOYEZ1pGq3mbWaFQPd7ldN6IY+3epPQ9j8btXEOPU+3e4PQ6MHVHPd9L89n9Lvh1Rz3eC/7L/x44OquW72gWmBMP4XJiNC7p8ONOP3D1PubBb+H5iN6JWMx49s3j1M8Uaedl3pRjDFDFP07naQ/BequfPu5hKGEaUU4Wc7d7q1KS4/0/w7mvdHw3j75oFLx7YQ/WidbIPB3g+zLPTzfW+zS2eXZ9od7rg2RDbfs2i4+koCQn/bD0iB+oD10CitA6pHiv9W3dje0GCVHjNP9BHOGFHIVRjRc7wwSBr6KpXbquDwy9hhvKG/yqWTLJQoUZBuRDEZUSM5+F7Z6jMPA2kmLp1crsnQ/bQd7i+autFtY49R8Ju43ysPMii1t3obC4yzvFU2ElYXh38eTcL+OouGcsPGZEqTdpecOY9fky2bZduo2ZS3yoan+rTb22wQ4TS083J7awzyTVu1trZ3YMumZtIvqRpx1NHjZLJyw3fKRof6yo7G1QuTxhWsvbZMMN8Zrt7EmhRYtaVv7PMLP6Uhm8Oz03Zf3AXd804eFqPgM2PUTQpXqPAcWJYfzwu5snw6bQa+w1ueBOZVL3VHZk/iC6XZIsQ42ydlEm/d7Gzk4jp/a0tTNtHfVZTAeuWm90d43DDfPuWYZkEyGzajhvkwToIMITOoQWGVNDGtCpqVqmUyiymnkc1Imk35ARXIy0Uo80NMWzGSdF3FFrG90gijf8oUUPlrJr+REHE8rwwKDx5SmNaCFd/gQuWnB2PIXN6bnCZD9zKjeJEZl1obMXMupaWY08qL5zQtrB/J4i9JRrxeXNyXaOpYw5vQMCn9w9H6qJwWsv5alyeZrcWP4zPDxVHinOVj5U32118lcVDrxjbF6ZaY79Mk2T+5Q3r3ZcLFpYbaCyNEf7k2IkRc9tST0U7syF8Qv9w5JIb7lxieCQ5n5j0KymRe4/wTrMZsD3fkH4yJxzuUYnunHcX/dpvnlmGQ9rl/YhyUfr/WQWhpWC4l27KVwdS751ZCNKosOT01zhMXI7vxZXpVNnevj6ZniyNJM3d1YOlThykb3C+bMCbC7yfEq0MBQzY9M5+8hkHRsjXSyAc1A9Cp22QoZqE7ZfvW/V4tk8+9095feePj4KndjXU5WfPxcnfu5b6IaPy8d959zw7NXaKe46/rj0bWDemvow2xbH7dOW3K1BPadWyKELlTNlcbS1oan5Ruw7Afzej+/EzZeLO1w0kQUoqLSsAyJC0i0mwwnbXbWLGv5WHG1Yx3+7q2y5Qt3i3qKE26dHVgvEp29alSRKKD6r6HoWC041o2vh8NlWGWW9ReqlPpUeQzfxeOvUOYPNUZbpR8jMMLQalQj+LB5NL8YXrK1C6LizeqtsswhSEVPoG3V8P14NVrGVHuiVtGMy2cTyhVDkjuUQHXblyPEeqVfttcbvlXHmFsJUZWVFyhuHX0OH3qVIqtRYT59YhbOGGDtdtFYAYYWdPrS4sSpUq2lToL1zv2mPZbV9rt8CblF3KObri7lWxVJF/kYPi5/L7sVWpikh0Z79Ik3T43G4wn5vXFlWmX6SIskbGVqRwi044MemD5me2iCFkxUslWzZ16CWOCtfdYB0ie6n7kVtkcWrar6FbaUhQbigjxqao1elskvQYi+jQKB8FiKlkEg1B8rs9LcIf1tmQTfeXcnENSWsmW1jfeKw1SRFG5Kak3aeMkjnyjbMrejOQ1oHKSX75qxaFh27Yeovl23UzlDuPpgNXTIibNxYdj425y2lvbnXLBtWxGvgSXKaY+1S6d0bHVVDjlt8qmo2u5H1OnelV035xJo/hi1DDehjq9TbyGk9VuH0N4b02+DlPaGJkK7f4o0266fzrqW+NbZXNoebovpI8bvWxVrdNvu8jqxFSZEbc3dK6WEk75oOqXW6xkM8JQnZxVpqhvjimVxZ2hm2XT84qYYksBb0wgPsDdUULqICkRtr+9eFsZclSXi2lHb1OyqUyG3dtK87S+XTaHlhZ1wZ3WmZ7N/TFpyjHz7LHdGA1W4RtRc2LkadtWb9U5O29f/m8moFSQdrttqyxO5J3UjXqRZs7FDMg8mi0naZKkk/W4mUvqb4PGlLC2ZiycMmZ9LPYZatmSepRqRaky4dN6kzbwt8+kdY48XFV7vArULKfvj9NNjihFSDhtwncTf3pZkFytT7XWrujSHZm1Bqh0DVd6kLqVI6gtxBLrpdraR6TKrxZa3Cybjg3Kn45eWWbB7cW5oS8D0lbSVcQHPOgOECTW4CpGyrR6Wobx0hNZV7KNVXk+w6qnH5l28fUmh6qpSg40QyeHkGuyWfUF045l76dhrCVIjCyoXl7Wnxlip+61efO+as+/vwspkn3VV7854yomHTuUixg3HNY/1wquhJPDxE3StjOvo4SlXGfxc3JFNisefm0tFLVMV1gsAMg4wQn9XOBnrF5+EV5sl3CTtkmSDONJstT79xkzMiDLU7CorINMBPNqnfjrNAgSHWQs5Q1RaXZ3lXyv3IRfk81YbHxxKRS2PNelR3EYTL+iOpnYP8zSIKPloGM0aM8h5jopu1C9tOWX8m2r4vo6q56GhR7I9JqnV2XTIbzbjPeeTmOURrPuqXWY+GWMwFEr9LLuKz13/XxGL6Up+8q7ou183qjcxM1s+U+y6YqA/qvr7uhPj6ZpogUyMzQVjRoQnrUPGBsZEDsuOYS6V9BJ40dVAT8y7MgPspFM7Td55YQgsSqOrtPfiXieNsLYVsURofmXvce5yKwo2bLcSI98G64x7VlmdlE9D0eMB01212WrOsHrC0Ka9W3XmAdO0Piqo76NIHZe63kyDpC10BUyqh7yPUxCy09m9Bgrmzo+mXU8BO+Ko83jHnbQWLKSwQbZr+Sfscptyn9UVut1UXzdqFdUU3KEWJbnIamWyut1UjEjE3+QO6j1+BFDOBz0BiFvlhJyxMIww8WxZJUmLTPEpPiz1J7tOeJIDdLTy6L4mlfV7hKrnMOQTX669LIHwlh3id3lqhH1O3c+WaiKno5SxefznkpxW7anYzlSXYWxz+ctzyW8WDZqNOrwFtXe8xTMa2WzYuv8Xe/deMMzVy+WbVG36tnlRZd5wxN+wvuSi+eHF4XYHC9kgNOPps9e3bvGG54nVWWBL/NDuUwR4l8/BXEf8PTyY8Cz8o8Bb2Z4DHgPyIPAW2ceA95x9CDwRq3HgPe3PQi8LfBB4N2Uj6LehBos4E2odwPv3QUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAO/kfWbiWK9AH9MAAAAAASUVORK5CYII=">
-  <h3>NEW SONG ${i}</h3>
-  <p>COMİNG SOON .</p>
-  <button class="downloadBtn" onclick="download(${i})">FOLLOW FOR MORE</button>`;
-  grid.appendChild(card);
-}
-</script>
-<style>
-/* -----------------------------
-HOVER EFECTLERİ VE BUTONLAR
------------------------------ */
-
-.downloadBtn:hover{
-  background:#000000;
-  color:white;
-  transform:scale(1.05);
-  transition:0.2s;
-}
-
-/* -----------------------------
-RESPONSIVE GRID
------------------------------ */
-@media(max-width:1200px){
-  .grid{
-    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-    gap:25px;
-  }
-}
-@media(max-width:768px){
-  .hero h1{
-    font-size:40px;
-  }
-  .scrollBtn{
-    font-size:16px;
-    padding:12px 25px;
-  }
-}
-
-
-
-/* -----------------------------
-SMOOTH SCROLL OPTİMİZASYONU
------------------------------ */
-html{
-  scroll-behavior:smooth;
-}
-.card{
-  opacity:60;
-  transform:translateY(50px);
-  transition:0.6s ease;
-}
-.card.visible{
-  opacity:1;
-  transform:translateY(0);
-}
-</style>
-
-<script>
-    const observer = new IntersectionObserver(entries=>{
-  entries.forEach(entry=>{
-    if(entry.isIntersecting) entry.target.classList.add("visible");
-  });
-}, {threshold:0.1});
-
-document.querySelectorAll(".card").forEach(card=>{
-  observer.observe(card);
-});
-// -----------------------------
-// SMOOTH SCROLL (NAVBAR LINKLERİ)
-document.querySelectorAll("nav ul li a").forEach(anchor=>{
-  anchor.addEventListener("click", function(e){
-    e.preventDefault();
-    const target=document.querySelector(this.getAttribute("href"));
-    if(target){
-      target.scrollIntoView({behavior:"smooth"});
-    }
-  });
-});
-
-// -----------------------------
-// YENİ DOWNLOAD BUTONLARI DİNAMİK
-for(let i=2;i<=0;i++){
-  const card = document.createElement("div");
-  card.className="card";
-  card.innerHTML = `<img src="data:image/png;base64,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">
-  <h3>COMİNG SOON ${i}</h3>
-  <p>NEW SONGS ${i}.</p>
-  <button class="downloadBtn" onclick="download(${i})">Download</button>`;
-  document.querySelector(".grid").appendChild(card);
-}
-
-// -----------------------------
-// RESIZE EVENT (CANVAS)
-window.addEventListener("resize", ()=>{
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-});
-
-</script>
