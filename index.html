@@ -6,7 +6,86 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<style>
+    * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+}
+
+/* HEADER */
+.header {
+    background: #c40000;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-radius: 0 0 15px 15px;
+}
+
+.header input {
+    margin-top: 10px;
+    padding: 10px;
+    width: 250px;
+    border: none;
+    border-radius: 20px;
+    outline: none;
+}
+
+/* NAV */
+.nav {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background: rgb(255, 255, 255);
+}
+
+.nav button {
+    padding: 10px 15px;
+    border: none;
+    background: #c40000;
+    color: white;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.nav button:hover {
+    background: #ff0000;
+    transform: scale(1.05);
+}
+
+/* NEWS */
+.news-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.news {
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    transition: 0.3s;
+    border-left: 5px solid #c40000;
+}
+
+.news:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.news h2 {
+    color: #c40000;
+    margin-bottom: 10px;
+}
+    </style>
 <!-- HEADER -->
 <header class="header">
     <h1>📰 TurBo Haber</h1>
